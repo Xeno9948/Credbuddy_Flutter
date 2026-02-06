@@ -361,9 +361,9 @@ export async function registerRoutes(
         const totalRev = entries.reduce((a, b) => a + b.revenueCents, 0) / 100;
         const latestScore = await storage.getLatestScore(body.userId);
         const band = latestScore?.band ?? "N/A";
-        reply = `📊 *Weekly Status*\n\nRevenue: R${totalRev.toLocaleString()}\nRisk Level: ${band}\n\nKeep submitting daily to improve your score.`;
+        reply = `📊 *Weekly Status*\n\nRevenue: R${totalRev.toLocaleString()}\nRisk Band: ${band}\n\nRegular daily submissions help increase data coverage.\n\n_Decision-support only. Final decisions remain with you._`;
       } else if (lowerInput === "help") {
-        reply = `🤖 *AI Credit Assistant — Help*\n\nHere are all available commands:\n\n📊 *Track your finances:*\n• *R500* — Log today's revenue (e.g. R500, R1200)\n• *400 transport* — Log an expense with a note\n• *CASH 2000* — Update your cash on hand\n\n📈 *View your data:*\n• *STATUS* — See your weekly cashflow snapshot\n• *SCORE* — View your full credit score with tips\n\n🔮 *Plan ahead:*\n• *SCENARIO* — Test a repayment scenario\n\n💡 *Tips:*\n• Log your revenue and expenses every day\n• Even R0 days count — consistency improves your score\n• Your score updates each time you type SCORE\n\nType any command to get started!`;
+        reply = `🤖 *CredBuddy — Help*\n\nHere are all available commands:\n\n📊 *Track your finances:*\n• *R500* — Log today's revenue (e.g. R500, R1200)\n• *400 transport* — Log an expense with a note\n• *CASH 2000* — Update your cash on hand\n\n📈 *View your data:*\n• *STATUS* — See your weekly cashflow snapshot\n• *SCORE* — View your credit risk score with breakdown\n\n🔮 *Plan ahead:*\n• *SCENARIO* — View a hypothetical repayment scenario\n\n💡 *Data tips:*\n• Log your revenue and expenses every day\n• Even R0 days count — consistency increases data coverage\n• Your score updates each time you type SCORE\n\n_Decision-support only. Final decisions remain with you._`;
       } else if (lowerInput === "score") {
         const entries = await storage.getRecentEntries(body.userId, 14);
         const cashEst = await storage.getLatestCashEstimate(body.userId);
@@ -436,7 +436,7 @@ export async function registerRoutes(
           reply = "Please enter a valid amount, e.g. CASH 2000.";
         }
       } else if (lowerInput.includes("scenario")) {
-        reply = `🔮 *Scenario Engine*\n\nExample: If you took on *R1000* repayment over 3 months:\n• Monthly repayment: ~R380/pm\n• Cashflow Impact: Low Risk\n\n*Disclaimer:* This is a hypothetical estimate for your planning purposes only. It is not a credit offer or financial advice.`;
+        reply = `🔮 *Scenario Engine*\n\nExample: If a *R1000* repayment were added over 3 months:\n• Estimated monthly repayment: ~R380/pm\n• Observed cashflow impact: Lower pressure indicated\n\nThis is a hypothetical estimate based on observed data only. It is not a credit offer, financial advice, or a recommendation.\n\n_Decision-support only. Final decisions remain with you._`;
       } else {
         reply = "I didn't quite catch that. Try *HELP* for available commands.";
       }
@@ -726,16 +726,16 @@ export async function registerRoutes(
   }
 
   function confidenceLabel(c: number): string {
-    if (c >= 80) return "Strong";
-    if (c >= 60) return "Good";
-    if (c >= 40) return "Medium";
+    if (c >= 80) return "High";
+    if (c >= 60) return "Moderate";
+    if (c >= 40) return "Limited";
     return "Low";
   }
 
   function featureLevel(val: number): string {
-    if (val >= 0.7) return "Good";
-    if (val >= 0.4) return "Medium";
-    return "Poor";
+    if (val >= 0.7) return "Higher";
+    if (val >= 0.4) return "Moderate";
+    return "Lower";
   }
 
   function trendLabel(val: number): string {
@@ -744,7 +744,7 @@ export async function registerRoutes(
     return "Down";
   }
 
-  const DISCLAIMER_TEXT = "This report is for decision-support purposes only. It does not constitute financial advice, a credit decision, or a guarantee of any outcome. Score v1 is experimental and based on self-reported cashflow data. Final credit decisions remain with the partner.";
+  const DISCLAIMER_TEXT = "CredBuddy provides data-driven credit risk insights for informational purposes only. CredBuddy does not provide financial advice, credit decisions, or recommendations. The final decision remains entirely with the user or authorized partner. Score v1 is experimental and based on self-reported cashflow data.";
 
   app.get("/api/v1/users/:userId/credit-report.pdf", partnerAuth, async (req, res) => {
     try {

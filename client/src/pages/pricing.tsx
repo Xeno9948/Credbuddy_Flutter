@@ -115,7 +115,7 @@ export default function Pricing() {
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 max-w-3xl mx-auto">
           <p className="text-sm text-amber-800 text-center flex items-center justify-center gap-2">
             <Shield className="w-4 h-4" />
-            We provide credit risk assessments and decision-support information only. We do not approve or decline applications. Final decisions remain with authorized partners.
+            CredBuddy provides data-driven credit risk insights for informational purposes only. CredBuddy does not provide financial advice, credit decisions, or recommendations. Final decisions remain with you.
           </p>
         </div>
       </main>

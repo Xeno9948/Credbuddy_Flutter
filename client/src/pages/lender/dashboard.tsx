@@ -64,15 +64,15 @@ export default function LenderDashboard() {
   };
 
   const bandChartData = stats ? [
-    { band: "A (Excellent)", count: stats.bandDist.A || 0, color: BAND_COLORS.A },
-    { band: "B (Good)", count: stats.bandDist.B || 0, color: BAND_COLORS.B },
-    { band: "C (Fair)", count: stats.bandDist.C || 0, color: BAND_COLORS.C },
-    { band: "D (Poor)", count: stats.bandDist.D || 0, color: BAND_COLORS.D },
+    { band: "A (Lower Risk)", count: stats.bandDist.A || 0, color: BAND_COLORS.A },
+    { band: "B (Moderate)", count: stats.bandDist.B || 0, color: BAND_COLORS.B },
+    { band: "C (Elevated)", count: stats.bandDist.C || 0, color: BAND_COLORS.C },
+    { band: "D (Higher Risk)", count: stats.bandDist.D || 0, color: BAND_COLORS.D },
   ] : [];
 
   const riskPieData = stats ? [
-    { name: "Low Risk (A/B)", value: stats.lowRisk, fill: "#10b981" },
-    { name: "High Risk (C/D)", value: stats.highRisk, fill: "#ef4444" },
+    { name: "Lower Risk (A/B)", value: stats.lowRisk, fill: "#10b981" },
+    { name: "Higher Risk (C/D)", value: stats.highRisk, fill: "#ef4444" },
   ] : [];
 
   return (
@@ -142,7 +142,7 @@ export default function LenderDashboard() {
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-emerald-700 uppercase tracking-wider font-medium">Low Risk (A/B)</p>
+                      <p className="text-xs text-emerald-700 uppercase tracking-wider font-medium">Lower Risk (A/B)</p>
                       <h2 className="text-3xl font-display font-bold text-emerald-900 mt-1">{stats.lowRisk}</h2>
                       <p className="text-xs text-emerald-600 mt-1">applicants</p>
                     </div>
@@ -157,7 +157,7 @@ export default function LenderDashboard() {
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-red-700 uppercase tracking-wider font-medium">High Risk (C/D)</p>
+                      <p className="text-xs text-red-700 uppercase tracking-wider font-medium">Higher Risk (C/D)</p>
                       <h2 className="text-3xl font-display font-bold text-red-900 mt-1">{stats.highRisk}</h2>
                       <p className="text-xs text-red-600 mt-1">applicants</p>
                     </div>

@@ -1,4 +1,6 @@
 import type { ExplainableBreakdown } from "./buildExplainableBreakdown";
+import { POLISHER_SYSTEM_PROMPT } from "../llm/systemPrompts";
+import { sanitizeLLMOutput, ensureDisclaimer } from "../llm/sanitizeOutput";
 
 export interface PolishedResult {
   polished: boolean;
@@ -18,19 +20,6 @@ export async function polishWithLLM(
   }
 
   try {
-    const systemPrompt = `You are a text editor for a financial inclusion platform. Your ONLY job is to improve the wording and readability of the provided explanations.
-
-STRICT RULES:
-- Do NOT calculate anything
-- Do NOT give financial advice
-- Do NOT promise outcomes
-- Do NOT add or remove any facts
-- Do NOT change any numbers, scores, or percentages
-- Keep the same structure and meaning
-- Keep the same language (Dutch for entrepreneur, English for lender)
-- Make sentences flow more naturally
-- Keep it concise`;
-
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -40,10 +29,10 @@ STRICT RULES:
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: POLISHER_SYSTEM_PROMPT },
           {
             role: "user",
-            content: `Please improve the wording of these two texts. Return them as JSON with keys "entrepreneur" and "lender". Do not change any facts or numbers.\n\nEntrepreneur text (Dutch):\n${entrepreneurText}\n\nLender text (English):\n${lenderText}`,
+            content: `Improve the wording of these two credit risk insight texts. Return them as JSON with keys "entrepreneur" and "analyst". Do not change any facts or numbers. Use only neutral, descriptive language.\n\nEntrepreneur text:\n${entrepreneurText}\n\nAnalyst text:\n${lenderText}`,
           },
         ],
         temperature: 0.3,
@@ -65,10 +54,16 @@ STRICT RULES:
 
     const parsed = JSON.parse(content);
 
+    const rawEntrepreneur = parsed.entrepreneur ?? entrepreneurText;
+    const rawLender = parsed.analyst ?? parsed.lender ?? lenderText;
+
+    const sanitizedEntrepreneur = sanitizeLLMOutput(rawEntrepreneur, entrepreneurText);
+    const sanitizedLender = sanitizeLLMOutput(rawLender, lenderText);
+
     return {
       polished: true,
-      entrepreneurText: parsed.entrepreneur ?? entrepreneurText,
-      lenderText: parsed.lender ?? lenderText,
+      entrepreneurText: ensureDisclaimer(sanitizedEntrepreneur.text),
+      lenderText: ensureDisclaimer(sanitizedLender.text),
     };
   } catch {
     return { polished: false, entrepreneurText, lenderText };

@@ -28,9 +28,9 @@ export default function Terms() {
           <div>
             <h2 className="text-lg font-bold text-amber-900 mb-1">Important Notice</h2>
             <p className="text-amber-800">
-              We provide credit risk assessments and decision-support information only.
-              We do not approve or decline applications.
-              Final decisions remain with authorized partners.
+              CredBuddy provides data-driven credit risk insights for informational purposes only.
+              CredBuddy does not provide financial advice, credit decisions, or recommendations.
+              The final decision remains entirely with the user or authorized partner.
             </p>
           </div>
         </div>
@@ -47,20 +47,19 @@ export default function Terms() {
               authorized risk partners.
             </p>
 
-            <h2 className="text-lg font-semibold mt-8 mb-3">2. Not a Credit Provider</h2>
+            <h2 className="text-lg font-semibold mt-8 mb-3">2. Data Tool Positioning</h2>
             <p>
-              The Service is NOT a credit provider and does NOT:
+              The Service is a data and insight tool. It does NOT:
             </p>
             <ul className="list-disc pl-6 space-y-1">
-              <li>Provide credit or financial facilities</li>
-              <li>Approve or decline applications</li>
-              <li>Make binding credit decisions</li>
+              <li>Provide financial advice or recommendations</li>
+              <li>Make credit decisions of any kind</li>
               <li>Guarantee any financial outcome</li>
-              <li>Act as a financial advisor</li>
+              <li>Act as a financial advisor or intermediary</li>
             </ul>
             <p className="mt-2">
-              All credit risk assessments are for decision-support purposes only. Final credit decisions
-              remain solely with the authorized partner.
+              All credit risk insights are for decision-support and informational purposes only. Final decisions
+              remain entirely with the user or authorized partner.
             </p>
 
             <h2 className="text-lg font-semibold mt-8 mb-3">3. Data & Scoring</h2>
@@ -68,7 +67,7 @@ export default function Terms() {
               Credit Score v1 is experimental and based on self-reported cashflow data submitted via
               the WhatsApp interface. The score (0-1000) is computed using six behavioral features
               over a 14-day lookback window. Scores are NOT equivalent to traditional credit bureau
-              scores and should be treated as supplementary information.
+              scores and are intended to be treated as supplementary information.
             </p>
 
             <h2 className="text-lg font-semibold mt-8 mb-3">4. Accuracy & Limitations</h2>
@@ -84,12 +83,12 @@ export default function Terms() {
 
             <h2 className="text-lg font-semibold mt-8 mb-3">5. Partner Responsibilities</h2>
             <p>
-              Authorized partners using this Service agree to:
+              Authorized partners accessing this Service acknowledge:
             </p>
             <ul className="list-disc pl-6 space-y-1">
               <li>Use assessments as one input among many in their credit decisions</li>
               <li>Maintain their own independent underwriting processes</li>
-              <li>Not rely solely on our scores for credit decisions</li>
+              <li>Not rely solely on our data for any decisions</li>
               <li>Comply with all applicable regulations in their jurisdiction</li>
               <li>Protect the confidentiality of shared reports and data</li>
             </ul>
@@ -129,7 +128,7 @@ export default function Terms() {
           <p className="text-sm text-amber-800 text-center">
             <strong>Disclaimer:</strong> This report is for decision-support purposes only. It does not constitute
             financial advice, a credit decision, or a guarantee of any outcome. Score v1 is experimental
-            and based on self-reported cashflow data. Final credit decisions remain with the partner.
+            and based on self-reported cashflow data. Final decisions remain with you.
           </p>
         </div>
       </main>

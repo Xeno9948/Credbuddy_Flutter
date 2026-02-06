@@ -12,16 +12,16 @@ import { usePartnerApplicant, usePartnerRecalc, useCreateShareLink } from "@/lib
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line } from "recharts";
 
 function confidenceLabel(c: number): string {
-  if (c >= 80) return "Strong";
-  if (c >= 60) return "Good";
-  if (c >= 40) return "Medium";
+  if (c >= 80) return "High";
+  if (c >= 60) return "Moderate";
+  if (c >= 40) return "Limited";
   return "Low";
 }
 
 function featureLevel(val: number): string {
-  if (val >= 0.7) return "Good";
-  if (val >= 0.4) return "Medium";
-  return "Poor";
+  if (val >= 0.7) return "Higher";
+  if (val >= 0.4) return "Moderate";
+  return "Lower";
 }
 
 function trendLabel(val: number): string {
@@ -31,8 +31,8 @@ function trendLabel(val: number): string {
 }
 
 function levelColor(level: string): string {
-  if (level === "Good" || level === "Up") return "text-emerald-700 bg-emerald-50 border-emerald-200";
-  if (level === "Medium" || level === "Flat") return "text-amber-700 bg-amber-50 border-amber-200";
+  if (level === "Higher" || level === "High" || level === "Up") return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  if (level === "Moderate" || level === "Limited" || level === "Flat") return "text-amber-700 bg-amber-50 border-amber-200";
   return "text-slate-700 bg-slate-100 border-slate-300";
 }
 
@@ -42,7 +42,7 @@ function TrendIcon({ direction }: { direction: string }) {
   return <Minus className="w-4 h-4 text-amber-500" />;
 }
 
-const DISCLAIMER = "Decision-support only. Final credit decisions remain with the partner.";
+const DISCLAIMER = "Decision-support only. Final decisions remain with you.";
 
 export default function ApplicantDetail() {
   const [, setLocation] = useLocation();
@@ -424,7 +424,7 @@ export default function ApplicantDetail() {
 
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <p className="text-sm text-amber-800">
-            <strong>Disclaimer:</strong> This report is for decision-support purposes only. It does not constitute financial advice, a credit decision, or a guarantee of any outcome. Score v1 is experimental and based on self-reported cashflow data. Final credit decisions remain with the partner.
+            <strong>Disclaimer:</strong> CredBuddy provides data-driven credit risk insights for informational purposes only. CredBuddy does not provide financial advice, credit decisions, or recommendations. The final decision remains entirely with the user or authorized partner.
           </p>
         </div>
 

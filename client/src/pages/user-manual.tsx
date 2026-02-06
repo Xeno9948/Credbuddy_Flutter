@@ -288,15 +288,15 @@ export default function UserManual() {
           </CardHeader>
           <CardContent className="text-sm text-amber-800 space-y-2">
             <p>
-              This system is a <strong>decision-support tool only</strong>. It does not make credit decisions
-              or guarantee any financial outcome.
+              CredBuddy provides data-driven credit risk insights for informational purposes only.
+              CredBuddy does not provide financial advice, credit decisions, or recommendations.
             </p>
             <p>
-              Credit Score v1 is experimental and based on self-reported cashflow data. Scores should be used
-              as one input among many in any credit assessment process.
+              Credit Score v1 is experimental and based on self-reported cashflow data. Risk indicators
+              are descriptive only and reflect observed data patterns.
             </p>
             <p>
-              The AI explanations are generated for informational purposes and do not constitute financial advice.
+              The final decision remains entirely with the user or authorized partner.
             </p>
           </CardContent>
         </Card>

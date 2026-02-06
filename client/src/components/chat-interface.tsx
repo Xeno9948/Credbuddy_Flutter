@@ -19,7 +19,7 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: "Sawubona! 👋\n\nWelcome to your AI Credit Assistant.\n\nType *HELP* for commands.\nType *R500* to log today's revenue.\nType *STATUS* for your cashflow snapshot.",
+      text: "Sawubona! 👋\n\nWelcome to CredBuddy — your credit risk data tool.\n\nType *HELP* for commands.\nType *R500* to log today's revenue.\nType *STATUS* for your cashflow snapshot.",
       sender: 'bot',
       timestamp: new Date()
     }

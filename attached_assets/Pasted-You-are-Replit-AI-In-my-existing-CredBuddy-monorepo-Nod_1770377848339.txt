@@ -1,0 +1,85 @@
+You are Replit AI. In my existing CredBuddy monorepo (Node.js + TypeScript, Express, Prisma, PostgreSQL; WhatsApp assistant + lender portal), implement BOTH:
+
+(2) Rewrite ALL existing copy across portal, assistant WhatsApp messages, PDFs, and public pages to follow “CredBuddy = DATA TOOL (decision-support only)” positioning.
+(3) Audit and harden ALL LLM prompts to be FAIS-safe (no advice/recommendations/decisions), including adding guardrails and a prohibited-terms filter.
+
+PRIMARY OBJECTIVE
+CredBuddy must be unambiguously a credit DATA/INSIGHT tool:
+- We DO NOT provide financial advice
+- We DO NOT approve/decline
+- We DO NOT recommend actions
+- We provide descriptive risk indicators, scores, confidence, and data coverage only
+This must be reflected in UI text, WhatsApp responses, PDF language, API responses, and any LLM prompts.
+
+SCOPE A — COPY REWRITE (EVERYWHERE)
+1) Find and replace ALL occurrences (code + templates) of lending/decision language, including but not limited to:
+   - “approve”, “decline”, “reject”, “accept”, “eligible”, “recommend”, “advice”, “should”, “must”, “proceed”, “do not proceed”, “safe/unsafe”, “good/bad borrower”, “creditworthy”, “unaffordable”.
+2) Replace with permitted descriptive language:
+   - “indicates”, “shows”, “highlights”, “reflects”, “based on observed data”, “risk indicators”, “trend”, “signal”, “confidence”, “data coverage”, “decision-support only”, “final decision remains with you”.
+3) Apply across:
+   - /apps/assistant (WhatsApp onboarding, STATUS, risk messages, scenario responses, help text)
+   - /apps/portal (all UI labels, buttons, banners, applicant pages, tables)
+   - PDF templates (credit report)
+   - public pages: /pricing, /terms, landing pages (if present)
+   - API response fields (rename any “decision” or “recommendation” keys to neutral equivalents like “risk_band”, “risk_indicators”, “assessment_summary”)
+4) Add a persistent disclaimer banner/footer in:
+   - Portal applicant detail pages
+   - Share pages (/share/:token)
+   - PDFs
+   - WhatsApp messages when showing assessment results
+Short disclaimer (UI/WhatsApp):
+   “Decision-support only. Final decisions remain with you.”
+Full disclaimer (PDF/Terms):
+   “CredBuddy provides data-driven credit risk insights for informational purposes only. CredBuddy does not provide financial advice, credit decisions, or recommendations. The final decision remains entirely with the user or lender.”
+
+SCOPE B — LLM PROMPTS HARDENING (FAIS-SAFE)
+1) Create a centralized prompt module in /packages/shared/llm/
+   - systemPrompts.ts (FAIS-safe base system prompt)
+   - prohibitedTerms.ts (list of forbidden words/phrases)
+   - sanitizeOutput.ts (post-check that blocks or rewrites forbidden language)
+   - buildPrompt.ts (helper to build prompts with consistent structure)
+2) Base system prompt MUST include:
+   “You provide descriptive, informational insights only.
+    You do not provide advice, recommendations, or decisions.
+    Use neutral language.
+    Avoid prescriptive terms such as ‘should’, ‘recommend’, ‘approve’, ‘decline’.
+    Always state that this output is decision-support only.”
+3) Enforce “deterministic facts only” rule:
+   - LLM may ONLY rephrase and structure explanations from given JSON inputs (score, band, confidence, flags, features, data coverage).
+   - LLM must not introduce new facts, numbers, or suggestions.
+4) Add prohibited-terms filter:
+   - After LLM output, scan for forbidden terms (case-insensitive, includes variants).
+   - If found: either
+     a) automatically rewrite using neutral alternatives (preferred), OR
+     b) fall back to deterministic template text (safe fallback)
+5) Apply the hardened prompts to every LLM use:
+   - Explainable AI wording (entrepreneur + lender)
+   - Risk warning messages
+   - Scenario explanation wording (NOTE: do NOT suggest taking a loan; only simulate “what-if” and end with “final decision remains with you”)
+   - Any translation/polishing features
+6) Add unit tests:
+   - Test that forbidden terms are not present in outputs
+   - Test fallback works when forbidden terms appear
+   - Test system prompt is always used
+
+SCOPE C — UI/UX TEXT RULES (ENFORCE)
+1) Remove any “Approve/Decline” actions in portal if still present; ensure actions are:
+   - Download Credit Report (PDF)
+   - Request updated assessment
+   - Share secure link
+2) Replace “Band A = safe / Band D = unsafe” type labels with neutral descriptors like:
+   - “Band A: lower risk indicators”
+   - “Band D: higher risk indicators”
+Avoid absolute claims.
+
+DELIVERABLES
+- Codebase updated with consistent, FAIS-safe copy across assistant + portal + PDFs + public pages
+- Centralized LLM prompt guardrails + prohibited terms filter + safe fallback
+- Tests added and passing
+- README section: “CredBuddy Positioning: Data tool (Decision-support only)”
+
+IMPLEMENTATION NOTES
+- Prefer a single source of truth for disclaimers (shared constants)
+- Keep changes backwards compatible where possible, but do rename dangerous response keys if needed
+- If you find ambiguous text, rewrite it to be descriptive and neutral
+- Do a final grep search in repo for forbidden words and eliminate them from user-facing outputs

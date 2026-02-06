@@ -60,10 +60,10 @@ const FEATURE_KEYS: FeatureKey[] = [
 ];
 
 const BAND_HEADLINES: Record<string, string> = {
-  A: "Strong financial profile",
-  B: "Solid financial profile with room for improvement",
-  C: "Developing financial profile — attention needed",
-  D: "Financial profile requires significant improvement",
+  A: "Lower observed risk indicators",
+  B: "Moderate observed risk indicators",
+  C: "Elevated observed risk indicators",
+  D: "Higher observed risk indicators",
 };
 
 export function buildExplainableBreakdown(
@@ -134,7 +134,7 @@ export function buildExplainableBreakdown(
   const disclaimer =
     language === "nl"
       ? "Deze uitleg is alleen ter informatie en vormt geen financieel advies. Score v1 is experimenteel en gebaseerd op zelf-gerapporteerde cashflowdata."
-      : "This explanation is for decision-support purposes only. It does not constitute financial advice, a credit decision, or a guarantee of any outcome. Score v1 is experimental and based on self-reported cashflow data.";
+      : "CredBuddy provides data-driven credit risk insights for informational purposes only. CredBuddy does not provide financial advice, credit decisions, or recommendations. The final decision remains entirely with the user or authorized partner. Score v1 is experimental and based on self-reported cashflow data.";
 
   return {
     summary: {

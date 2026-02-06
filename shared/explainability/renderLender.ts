@@ -58,7 +58,7 @@ export function renderForLenderText(breakdown: ExplainableBreakdown): string {
 
   if (breakdown.improvements.length > 0) {
     lines.push("");
-    lines.push("Recommended Actions:");
+    lines.push("Observed Data Insights:");
     for (const tip of breakdown.improvements) {
       lines.push(`  > ${tip}`);
     }

@@ -1,19 +1,38 @@
-# AI Credit & Cashflow Assistant
+# CredBuddy — AI Credit & Cashflow Assistant
+
+## CredBuddy Positioning: Data Tool (Decision-support only)
+
+CredBuddy is a **data-driven credit risk insight tool**. It provides descriptive risk indicators, scores, confidence levels, and data coverage based on observed cashflow data.
+
+**What CredBuddy does:**
+- Provides descriptive, informational credit risk insights
+- Generates scores, risk bands, confidence levels, and data coverage metrics
+- Uses neutral, FAIS-safe language throughout
+
+**What CredBuddy does NOT do:**
+- Does NOT provide financial advice or recommendations
+- Does NOT approve or decline applications
+- Does NOT make credit decisions of any kind
+- Does NOT act as a financial advisor or intermediary
+
+**Standard disclaimers:**
+- Short (UI/WhatsApp): "Decision-support only. Final decisions remain with you."
+- Full (PDF/Terms): "CredBuddy provides data-driven credit risk insights for informational purposes only. CredBuddy does not provide financial advice, credit decisions, or recommendations. The final decision remains entirely with the user or authorized partner."
 
 ## Overview
 
-This is a production-ready MVP for an **AI Credit & Cashflow Assistant** targeting micro-entrepreneurs in South Africa. The system has two main components:
+This is a production-ready MVP for **CredBuddy**, an AI Credit & Cashflow Assistant targeting micro-entrepreneurs in South Africa. The system has two main components:
 
-1. **WhatsApp Assistant** — A chatbot that onboards entrepreneurs, collects daily revenue/expenses, provides cashflow snapshots, predicts shortfall risk, runs loan scenario simulations, and computes a credit score (0–1000).
-2. **Lender Partner Portal** — A web-based dashboard for lenders/credit analysts to search applicants, view scores/bands/confidence/flags, review score history, and access decision data.
+1. **WhatsApp Assistant** — A chatbot that onboards entrepreneurs, collects daily revenue/expenses, provides cashflow snapshots, runs hypothetical scenario estimates, and computes a credit risk score (0–1000).
+2. **Partner Portal** — A web-based dashboard for risk partners/credit analysts to search applicants, view scores/bands/confidence/flags, review score history, and access credit risk data.
 
-Both components share a single PostgreSQL database and a common scoring engine. The project also includes an **Explainable AI** layer that translates scoring features into human-readable explanations for two audiences: entrepreneurs (WhatsApp-friendly, motivational, in English) and lenders (neutral, structured, in English).
+Both components share a single PostgreSQL database and a common scoring engine. The project also includes an **Explainable AI** layer that translates scoring features into human-readable explanations for two audiences: entrepreneurs (WhatsApp-friendly, descriptive, in English) and analysts (neutral, structured, in English).
 
 Additional pages:
-3. **User Manual** (`/manual`) — In-app guide covering getting started, subscription tiers, chat commands, credit score explanation, and lender portal usage.
-4. **Risk Manager Dashboard** (`/partner`) — Comprehensive dashboard for lenders with overview cards, risk band distribution chart, risk pie chart, flagged applicant alerts, recent activity feed, and applicant search.
+3. **User Manual** (`/manual`) — In-app guide covering getting started, subscription tiers, chat commands, credit score explanation, and partner portal usage.
+4. **Risk Manager Dashboard** (`/partner`) — Comprehensive dashboard for partners with overview cards, risk band distribution chart, risk pie chart, flagged applicant alerts, recent activity feed, and applicant search.
 
-**Important**: This is decision-support only. The system must NOT present itself as a lender, must NOT offer loans, and must include disclaimers.
+**Important**: This is decision-support only. The system is NOT a financial advisor, does NOT make credit decisions, and includes FAIS-safe disclaimers throughout.
 
 ## User Preferences
 
@@ -45,8 +64,8 @@ The project is a single monorepo (not split into workspace packages) with these 
 
 **Key Pages**:
 - `/` — Main dashboard with WhatsApp phone simulator (left) and admin analytics dashboard (right)
-- `/partner/login` — Lender portal login
-- `/partner` — Lender dashboard
+- `/partner/login` — Partner portal login
+- `/partner` — Partner dashboard
 - `/partner/applicant/:id` — Individual applicant detail view
 
 The main dashboard features a phone simulator component that mimics a WhatsApp interface, allowing users to interact with the chatbot. The admin dashboard on the right updates in real-time showing scoring data, charts, and feature breakdowns.
@@ -83,7 +102,7 @@ The main dashboard features a phone simulator component that mimics a WhatsApp i
 - `daily_entries` — Daily revenue and expense records (amounts in cents)
 - `cash_estimates` — Cash buffer snapshots
 - `score_snapshots` — Historical credit score records
-- `partners` — Lender partner accounts with API keys
+- `partners` — Risk partner accounts with API keys
 - `partner_user_access` — Partner-to-user access control
 - `decision_requests` — Decision packet request audit trail
 - `audit_logs` — System audit logging
@@ -94,12 +113,22 @@ The main dashboard features a phone simulator component that mimics a WhatsApp i
 
 Located in `shared/explainability/`, this is a pure interpretation layer that:
 1. Classifies each of the 6 scoring features into positive/neutral/negative buckets based on thresholds (≥0.7 positive, ≥0.4 neutral, <0.4 negative)
-2. Maps classifications to deterministic human-readable text labels (Dutch for entrepreneurs, English for lenders)
+2. Maps classifications to deterministic human-readable text labels (Dutch for entrepreneurs, English for analysts)
 3. Generates structured breakdown with summary, drivers, improvement tips, and disclaimers
 4. Optionally polishes text via OpenAI GPT-4o-mini (wording only, no recalculation)
-5. Renders audience-specific output: WhatsApp-friendly format for entrepreneurs, structured JSON for lenders
+5. Renders audience-specific output: WhatsApp-friendly format for entrepreneurs, structured JSON for analysts
 
 **Design Decision**: Deterministic mapping first, LLM only for optional wording polish. This ensures consistency and legal safety — the module never recalculates scores or makes decisions.
+
+### LLM Guardrails Module (FAIS-safe)
+
+Located in `shared/llm/`, this module ensures all LLM outputs comply with FAIS (Financial Advisory and Intermediary Services Act) requirements:
+- `systemPrompts.ts` — FAIS-safe base system prompts for polishing, scenarios, and general use
+- `prohibitedTerms.ts` — List of forbidden words/phrases (approve, decline, recommend, advice, should, must, eligible, creditworthy, etc.) with neutral replacements
+- `sanitizeOutput.ts` — Post-processing filter that scans LLM output for prohibited terms, auto-rewrites with neutral alternatives, or falls back to deterministic template text
+- `buildPrompt.ts` — Helper to build prompts with consistent FAIS-safe structure
+
+All LLM calls go through this pipeline: FAIS-safe system prompt → LLM generation → prohibited terms scan → auto-rewrite or safe fallback.
 
 ### Authentication & Authorization
 
@@ -111,7 +140,7 @@ Located in `shared/explainability/`, this is a pure interpretation layer that:
 
 The credit scoring engine (`server/scoring.ts`) analyzes the last 14 days of daily entries and produces:
 - **Score**: 0–1000 integer
-- **Band**: A (excellent), B (good), C (fair), D (poor)
+- **Band**: A (lower risk), B (moderate), C (elevated), D (higher risk)
 - **Confidence**: 0–100% based on data availability
 - **Flags**: Risk indicators (e.g., "R1 Low reliability")
 - **Feature Breakdown**: Six normalized (0–1) features — dd (data discipline), rs (revenue stability), ep (expense pressure), bb (buffer behavior), tm (trend momentum), sr (shock recovery)

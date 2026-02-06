@@ -1,0 +1,93 @@
+export const PROHIBITED_TERMS: string[] = [
+  "approve",
+  "approved",
+  "approval",
+  "decline",
+  "declined",
+  "reject",
+  "rejected",
+  "rejection",
+  "accept",
+  "accepted",
+  "eligible",
+  "eligibility",
+  "ineligible",
+  "recommend",
+  "recommended",
+  "recommendation",
+  "advice",
+  "advise",
+  "advising",
+  "should",
+  "must",
+  "proceed",
+  "do not proceed",
+  "safe borrower",
+  "unsafe borrower",
+  "good borrower",
+  "bad borrower",
+  "creditworthy",
+  "creditworthiness",
+  "unaffordable",
+  "guaranteed",
+  "guarantee",
+  "you qualify",
+  "you don't qualify",
+  "we suggest",
+  "we advise",
+  "take the loan",
+  "take a loan",
+  "get a loan",
+  "apply for",
+  "your application",
+  "loan offer",
+  "credit offer",
+  "lend",
+  "lender",
+  "lending",
+];
+
+export const NEUTRAL_REPLACEMENTS: Record<string, string> = {
+  "approve": "indicates",
+  "approved": "assessed",
+  "approval": "assessment",
+  "decline": "flag",
+  "declined": "flagged",
+  "reject": "flag",
+  "rejected": "flagged",
+  "accept": "note",
+  "accepted": "noted",
+  "eligible": "within observed range",
+  "ineligible": "outside observed range",
+  "recommend": "data indicates",
+  "recommended": "observed data shows",
+  "recommendation": "observation",
+  "advice": "insight",
+  "advise": "highlight",
+  "should": "may consider",
+  "must": "may consider",
+  "proceed": "continue",
+  "safe borrower": "lower risk indicators",
+  "unsafe borrower": "higher risk indicators",
+  "good borrower": "lower risk indicators",
+  "bad borrower": "higher risk indicators",
+  "creditworthy": "lower observed risk",
+  "creditworthiness": "observed risk level",
+  "unaffordable": "elevated expense pressure",
+  "guaranteed": "estimated",
+  "guarantee": "estimate",
+  "lender": "partner",
+  "lending": "credit assessment",
+};
+
+export function containsProhibitedTerms(text: string): string[] {
+  const found: string[] = [];
+  const lower = text.toLowerCase();
+  for (const term of PROHIBITED_TERMS) {
+    const regex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, "i");
+    if (regex.test(lower)) {
+      found.push(term);
+    }
+  }
+  return found;
+}

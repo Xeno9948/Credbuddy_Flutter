@@ -231,7 +231,7 @@ export function generateExplanations(
 
     if (flags.length === 0) reasons.push("No active risk flags detected.");
 
-    tips.push("Recommend applicant maintain daily submissions to improve data confidence.");
+    tips.push("Daily submissions may improve data confidence levels.");
     tips.push("Cash buffer verification via CashEstimate would increase confidence score.");
   }
 
