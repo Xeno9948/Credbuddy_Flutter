@@ -33,11 +33,9 @@ export default function LenderLogin() {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 bg-emerald-900 rounded-lg flex items-center justify-center">
-               <ShieldCheck className="text-emerald-400 w-8 h-8" />
-            </div>
+            <img src="/credbuddy-logo.png" alt="CredBuddy" className="w-14 h-14" />
           </div>
-          <CardTitle className="text-2xl font-display font-bold text-emerald-950">Partner Portal</CardTitle>
+          <CardTitle className="text-2xl font-display font-bold text-emerald-950">CredBuddy Partner Portal</CardTitle>
           <CardDescription>
             Authorized Risk Partners & Credit Analysts Only
           </CardDescription>

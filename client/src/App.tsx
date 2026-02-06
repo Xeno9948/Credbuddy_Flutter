@@ -13,6 +13,23 @@ import UserManual from "@/pages/user-manual";
 import Pricing from "@/pages/pricing";
 import Terms from "@/pages/terms";
 import SharedReport from "@/pages/shared-report";
+import WebLanding from "@/pages/web/landing";
+import WebLogin from "@/pages/web/login";
+import WebCallback from "@/pages/web/callback";
+import WebHome from "@/pages/web/home";
+import AddEntry from "@/pages/web/add-entry";
+import Entries from "@/pages/web/entries";
+import WebHistory from "@/pages/web/history";
+import Report from "@/pages/web/report";
+import { WebAppLayout } from "@/pages/web/app-layout";
+
+function WebApp({ component: Component }: { component: React.ComponentType }) {
+  return (
+    <WebAppLayout>
+      <Component />
+    </WebAppLayout>
+  );
+}
 
 function Router() {
   return (
@@ -25,6 +42,14 @@ function Router() {
       <Route path="/partner/login" component={LenderLogin} />
       <Route path="/partner" component={LenderDashboard} />
       <Route path="/partner/applicant/:id" component={ApplicantDetail} />
+      <Route path="/web">{() => <WebLanding />}</Route>
+      <Route path="/web/login">{() => <WebLogin />}</Route>
+      <Route path="/web/auth/callback">{() => <WebCallback />}</Route>
+      <Route path="/web/app">{() => <WebApp component={WebHome} />}</Route>
+      <Route path="/web/app/add">{() => <WebApp component={AddEntry} />}</Route>
+      <Route path="/web/app/entries">{() => <WebApp component={Entries} />}</Route>
+      <Route path="/web/app/history">{() => <WebApp component={WebHistory} />}</Route>
+      <Route path="/web/app/report">{() => <WebApp component={Report} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

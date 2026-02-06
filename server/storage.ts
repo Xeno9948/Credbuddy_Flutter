@@ -1,4 +1,4 @@
-import { eq, desc, and, gte, lte, sql, like } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql, like, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
@@ -16,6 +16,10 @@ import type {
   MessageLog, InsertMessageLog,
   Job, InsertJob,
   CreditReportShareLink, InsertCreditReportShareLink,
+  WebAccount, InsertWebAccount,
+  WebAccountUserLink, InsertWebAccountUserLink,
+  MagicLinkToken, InsertMagicLinkToken,
+  PhoneLinkCode, InsertPhoneLinkCode,
 } from "@shared/schema";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -93,6 +97,32 @@ export interface IStorage {
   getActiveUserCount(days: number): Promise<number>;
   getAverageScore(): Promise<number>;
   getScoreBandDistribution(): Promise<Record<string, number>>;
+
+  // Web Accounts
+  getWebAccountByEmail(email: string): Promise<WebAccount | undefined>;
+  getWebAccount(id: number): Promise<WebAccount | undefined>;
+  createWebAccount(account: InsertWebAccount): Promise<WebAccount>;
+  touchWebAccountLogin(id: number): Promise<void>;
+
+  // Web Account User Links
+  getLinkedUser(webAccountId: number): Promise<WebAccountUserLink | undefined>;
+  createWebAccountUserLink(link: InsertWebAccountUserLink): Promise<WebAccountUserLink>;
+
+  // Magic Link Tokens
+  createMagicLinkToken(token: InsertMagicLinkToken): Promise<MagicLinkToken>;
+  getMagicLinkTokenByHash(tokenHash: string): Promise<MagicLinkToken | undefined>;
+  markMagicLinkTokenUsed(id: number): Promise<void>;
+  countRecentMagicLinks(webAccountId: number, sinceMinutes: number): Promise<number>;
+
+  // Phone Link Codes
+  createPhoneLinkCode(code: InsertPhoneLinkCode): Promise<PhoneLinkCode>;
+  getActivePhoneLinkCode(webAccountId: number, phone: string): Promise<PhoneLinkCode | undefined>;
+  incrementPhoneLinkAttempts(id: number): Promise<void>;
+
+  // Web Sessions
+  createWebSession(webAccountId: number, sessionToken: string, expiresAt: Date): Promise<void>;
+  getWebSessionByToken(sessionToken: string): Promise<{ webAccountId: number; expiresAt: Date } | undefined>;
+  deleteWebSession(sessionToken: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -383,6 +413,101 @@ export class DatabaseStorage implements IStorage {
       .from(schema.cashEstimates)
       .where(eq(schema.cashEstimates.userId, userId));
     return result?.count ?? 0;
+  }
+
+  // ─── Web Accounts ──────────────────────────────────────
+  async getWebAccountByEmail(email: string): Promise<WebAccount | undefined> {
+    const [account] = await db.select().from(schema.webAccounts).where(eq(schema.webAccounts.email, email.toLowerCase()));
+    return account;
+  }
+
+  async getWebAccount(id: number): Promise<WebAccount | undefined> {
+    const [account] = await db.select().from(schema.webAccounts).where(eq(schema.webAccounts.id, id));
+    return account;
+  }
+
+  async createWebAccount(account: InsertWebAccount): Promise<WebAccount> {
+    const [created] = await db.insert(schema.webAccounts).values({ ...account, email: account.email.toLowerCase() }).returning();
+    return created;
+  }
+
+  async touchWebAccountLogin(id: number): Promise<void> {
+    await db.update(schema.webAccounts).set({ lastLoginAt: new Date() }).where(eq(schema.webAccounts.id, id));
+  }
+
+  // ─── Web Account User Links ───────────────────────────
+  async getLinkedUser(webAccountId: number): Promise<WebAccountUserLink | undefined> {
+    const [link] = await db.select().from(schema.webAccountUserLinks).where(eq(schema.webAccountUserLinks.webAccountId, webAccountId));
+    return link;
+  }
+
+  async createWebAccountUserLink(link: InsertWebAccountUserLink): Promise<WebAccountUserLink> {
+    const [created] = await db.insert(schema.webAccountUserLinks).values(link).returning();
+    return created;
+  }
+
+  // ─── Magic Link Tokens ────────────────────────────────
+  async createMagicLinkToken(token: InsertMagicLinkToken): Promise<MagicLinkToken> {
+    const [created] = await db.insert(schema.magicLinkTokens).values(token).returning();
+    return created;
+  }
+
+  async getMagicLinkTokenByHash(tokenHash: string): Promise<MagicLinkToken | undefined> {
+    const [token] = await db.select().from(schema.magicLinkTokens).where(
+      and(eq(schema.magicLinkTokens.tokenHash, tokenHash), gte(schema.magicLinkTokens.expiresAt, new Date()))
+    );
+    return token;
+  }
+
+  async markMagicLinkTokenUsed(id: number): Promise<void> {
+    await db.update(schema.magicLinkTokens).set({ usedAt: new Date() }).where(eq(schema.magicLinkTokens.id, id));
+  }
+
+  async countRecentMagicLinks(webAccountId: number, sinceMinutes: number): Promise<number> {
+    const since = new Date(Date.now() - sinceMinutes * 60 * 1000);
+    const [result] = await db.select({ count: sql<number>`count(*)::int` }).from(schema.magicLinkTokens)
+      .where(and(eq(schema.magicLinkTokens.webAccountId, webAccountId), gte(schema.magicLinkTokens.createdAt, since)));
+    return result?.count ?? 0;
+  }
+
+  // ─── Phone Link Codes ─────────────────────────────────
+  async createPhoneLinkCode(code: InsertPhoneLinkCode): Promise<PhoneLinkCode> {
+    const [created] = await db.insert(schema.phoneLinkCodes).values(code).returning();
+    return created;
+  }
+
+  async getActivePhoneLinkCode(webAccountId: number, phone: string): Promise<PhoneLinkCode | undefined> {
+    const [code] = await db.select().from(schema.phoneLinkCodes).where(
+      and(
+        eq(schema.phoneLinkCodes.webAccountId, webAccountId),
+        eq(schema.phoneLinkCodes.phone, phone),
+        gte(schema.phoneLinkCodes.expiresAt, new Date())
+      )
+    ).orderBy(desc(schema.phoneLinkCodes.createdAt)).limit(1);
+    return code;
+  }
+
+  async incrementPhoneLinkAttempts(id: number): Promise<void> {
+    await db.update(schema.phoneLinkCodes).set({
+      attempts: sql`${schema.phoneLinkCodes.attempts} + 1`,
+    }).where(eq(schema.phoneLinkCodes.id, id));
+  }
+
+  // ─── Web Sessions ─────────────────────────────────────
+  async createWebSession(webAccountId: number, sessionToken: string, expiresAt: Date): Promise<void> {
+    await db.insert(schema.webSessions).values({ webAccountId, sessionToken, expiresAt });
+  }
+
+  async getWebSessionByToken(sessionToken: string): Promise<{ webAccountId: number; expiresAt: Date } | undefined> {
+    const [session] = await db.select({
+      webAccountId: schema.webSessions.webAccountId,
+      expiresAt: schema.webSessions.expiresAt,
+    }).from(schema.webSessions).where(eq(schema.webSessions.sessionToken, sessionToken));
+    return session;
+  }
+
+  async deleteWebSession(sessionToken: string): Promise<void> {
+    await db.delete(schema.webSessions).where(eq(schema.webSessions.sessionToken, sessionToken));
   }
 }
 

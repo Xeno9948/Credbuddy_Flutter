@@ -80,10 +80,8 @@ export default function LenderDashboard() {
       <header className="bg-emerald-950 text-white border-b border-emerald-900 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
            <div className="flex items-center gap-2">
-             <div className="w-8 h-8 bg-emerald-800 rounded flex items-center justify-center font-bold font-display">
-               L
-             </div>
-             <span className="font-semibold text-lg tracking-tight">Risk Manager Portal</span>
+             <img src="/credbuddy-logo.png" alt="CredBuddy" className="w-8 h-8" />
+             <span className="font-semibold text-lg tracking-tight">CredBuddy Risk Manager</span>
            </div>
            <div className="flex items-center gap-4">
              <span className="text-sm text-emerald-300" data-testid="text-partner-name">{partnerName}</span>

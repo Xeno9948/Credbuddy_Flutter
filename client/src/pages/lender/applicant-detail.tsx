@@ -146,9 +146,10 @@ export default function ApplicantDetail() {
               </Button>
             </Link>
             <div className="h-6 w-px bg-slate-200" />
+            <img src="/credbuddy-logo.png" alt="CredBuddy" className="w-7 h-7" />
             <div className="flex flex-col">
               <span className="font-bold text-slate-900 leading-tight" data-testid="text-applicant-name">
-                Credit Risk Assessment
+                CredBuddy Credit Risk Assessment
               </span>
               <span className="text-xs text-slate-500">{profile?.businessName ?? user.phone}</span>
             </div>

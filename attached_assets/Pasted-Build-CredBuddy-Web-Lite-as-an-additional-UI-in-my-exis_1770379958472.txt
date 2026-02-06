@@ -1,0 +1,136 @@
+Build “CredBuddy Web Lite” as an additional UI in my existing CredBuddy monorepo (Node.js + TypeScript, Express, Prisma, PostgreSQL). CredBuddy is a DATA TOOL (decision-support only). Web Lite must be a simple companion to WhatsApp, not a full dashboard.
+
+GOAL
+Create a minimal, Klantenvertellen-like web app that lets SME users:
+- log in with email magic link (no passwords)
+- view their CredBuddy Score, Band, Confidence, Risk Indicators
+- enter daily Revenue and optional Expenses (same as WhatsApp)
+- view 14/30/90 day history (simple table is OK; chart optional)
+- download Credit Report (PDF) if available
+Everything must clearly show “Decision-support only. Final decisions remain with you.”
+
+NON-GOALS (DO NOT BUILD)
+- no bank/PSD2 integrations
+- no KYC flows
+- no “approve/decline” or recommendations
+- no complex accounting or invoicing
+- no advice language (“should”, “recommend”, “safe/unsafe”)
+
+TECH STACK
+- Node.js + Express (TypeScript)
+- Prisma + PostgreSQL
+- Server-rendered pages (EJS/Handlebars) OR a very small React SPA (choose the simplest)
+- Email sending for magic links:
+  - Use Resend API or SMTP via Nodemailer (implement both via env; prefer Resend)
+- Reuse existing shared packages:
+  - /packages/db (Prisma client)
+  - /packages/shared (scoring + explainability)
+  - /packages/shared/llm (FAIS-safe prompts) if present, but Web Lite can be deterministic
+
+DATA MODEL (Prisma) — ADD TABLES
+1) WebAccount
+- id
+- email (unique)
+- createdAt
+- lastLoginAt
+
+2) WebAccountUserLink
+- id
+- webAccountId
+- userId (links to existing User by phone)
+- role: "OWNER" | "ADMIN" (start with OWNER only)
+- createdAt
+
+3) MagicLinkToken
+- id
+- webAccountId
+- tokenHash
+- expiresAt
+- usedAt (nullable)
+- createdAt
+Indexes on tokenHash and expiresAt
+
+ASSOCIATION / CLAIM FLOW (IMPORTANT)
+Because WhatsApp users are identified by phone, Web Lite users by email:
+- After email login, user must “claim” their WhatsApp profile by entering their phone number.
+- Send a WhatsApp verification code to that phone via the existing WhatsApp sendText function.
+- User enters code on web, then create WebAccountUserLink.
+No SMS; verification happens via WhatsApp only.
+
+ADD DB TABLE
+4) PhoneLinkCode
+- id
+- webAccountId
+- phone (E.164)
+- codeHash
+- expiresAt
+- attempts
+- createdAt
+
+WEB LITE PAGES (ROUTES)
+Public:
+- GET /web  -> landing “CredBuddy Web Lite”
+- GET /web/login -> email input
+- POST /web/login -> send magic link email
+- GET /web/auth/callback?token=... -> verify token, create session cookie, redirect to /web/app
+
+App (session required):
+- GET /web/app -> home
+  - If no linked phone/user: show “Link your CredBuddy profile” form
+  - Else show Score + summary
+- GET /web/app/link-phone -> phone input + “Send code”
+- POST /web/app/link-phone -> send WhatsApp code
+- GET /web/app/verify-phone -> code input
+- POST /web/app/verify-phone -> verify code, link account to userId
+- GET /web/app/entries -> list daily entries (last 30)
+- GET /web/app/entries/new -> revenue + optional expense form for today
+- POST /web/app/entries -> create/update DailyEntry for today
+- GET /web/app/history -> show ScoreSnapshot history (14/30/90 selector)
+- GET /web/app/report -> link to download Credit Report (PDF) if generated; otherwise show “Not available yet”
+
+ADMIN/OPS (optional, keep minimal):
+- none needed beyond existing portal admin
+
+UI REQUIREMENTS (VERY SIMPLE)
+- Clean layout, minimal navigation:
+  - Home | Add today | Entries | History | Report
+- Always show disclaimer footer:
+  “Decision-support only. Final decisions remain with you.”
+- Keep language descriptive (no advice)
+- Phone must be masked in UI (show last 3 digits only)
+
+SESSION / SECURITY
+- Use httpOnly secure cookies for session
+- Store sessions server-side (simple in-memory is OK for MVP, but prefer DB-backed session table)
+- Rate limit:
+  - magic link requests per email
+  - phone link code attempts
+- Hash all tokens and codes in DB (never store plain)
+- Audit log:
+  - Reuse AuditLog if available; else add WebAuditLog:
+    LOGIN_LINK_SENT, LOGIN_SUCCESS, PHONE_LINK_CODE_SENT, PHONE_LINK_SUCCESS, ENTRY_CREATED
+
+INTEGRATION WITH EXISTING DATA
+- DailyEntry: reuse the same table as WhatsApp assistant
+- ScoreSnapshot: reuse; show latest
+- Explainable breakdown: reuse existing explainability generator; render entrepreneur-friendly text (Dutch)
+- “Request updated assessment” button:
+  - calls an internal endpoint to recalc score for that user
+  - logs an audit event
+  - shows “Assessment updated” toast/message
+
+EMAIL
+Implement email sending:
+- If RESEND_API_KEY present: use Resend
+- Else use SMTP env vars: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+- Provide .env.example entries and README instructions
+
+DELIVERABLES
+- New /apps/weblite (or add under /apps/portal if preferred; choose clean separation)
+- Prisma migrations for new tables
+- Working magic link login
+- WhatsApp phone-link verification
+- Entry form + history + score display
+- PDF report download link
+- Clear disclaimers everywhere
+- README: how to run Web Lite locally and in Replit

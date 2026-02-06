@@ -14,7 +14,8 @@ export default function Terms() {
                 <ArrowLeft className="w-4 h-4" /> Home
               </Button>
             </Link>
-            <span className="font-bold text-slate-900">Terms & Disclaimers</span>
+            <img src="/credbuddy-logo.png" alt="CredBuddy" className="w-6 h-6" />
+            <span className="font-bold text-slate-900">CredBuddy Terms & Disclaimers</span>
           </div>
           <Link href="/pricing">
             <Button variant="ghost" size="sm" data-testid="link-pricing">Pricing</Button>

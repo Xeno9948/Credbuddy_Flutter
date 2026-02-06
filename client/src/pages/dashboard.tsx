@@ -11,8 +11,9 @@ export default function Dashboard() {
       
       {/* Left Panel: Simulation (Phone) */}
       <div className="w-full lg:w-[450px] bg-slate-200 border-r border-slate-300 flex flex-col items-center justify-center p-8 shrink-0 relative overflow-y-auto">
-         <div className="absolute top-4 left-4 text-xs font-mono uppercase text-slate-500 tracking-widest">
-            Client Simulation
+         <div className="absolute top-4 left-4 flex items-center gap-2">
+            <img src="/credbuddy-logo.png" alt="CredBuddy" className="w-8 h-8" />
+            <span className="text-sm font-display font-semibold text-emerald-900">CredBuddy</span>
          </div>
          <div className="absolute top-3 right-3 flex gap-2">
            <Link href="/manual">

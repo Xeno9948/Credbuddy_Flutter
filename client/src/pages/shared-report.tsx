@@ -73,9 +73,12 @@ export default function SharedReport() {
 
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">Credit Risk Assessment</h1>
-            <p className="text-sm text-slate-500">Shared report — view only</p>
+          <div className="flex items-center gap-3">
+            <img src="/credbuddy-logo.png" alt="CredBuddy" className="w-8 h-8" />
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">CredBuddy Credit Risk Assessment</h1>
+              <p className="text-sm text-slate-500">Shared report — view only</p>
+            </div>
           </div>
           <Badge variant="outline" className="text-xs text-slate-500">
             Expires: {new Date(data.expiresAt).toLocaleDateString()}

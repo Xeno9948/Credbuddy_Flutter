@@ -189,3 +189,70 @@ export const creditReportShareLinks = pgTable("credit_report_share_links", {
 export const insertCreditReportShareLinkSchema = createInsertSchema(creditReportShareLinks).omit({ id: true, createdAt: true });
 export type InsertCreditReportShareLink = z.infer<typeof insertCreditReportShareLinkSchema>;
 export type CreditReportShareLink = typeof creditReportShareLinks.$inferSelect;
+
+// ─── Web Lite: Web Account ──────────────────────────────────
+export const webAccounts = pgTable("web_accounts", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastLoginAt: timestamp("last_login_at"),
+});
+
+export const insertWebAccountSchema = createInsertSchema(webAccounts).omit({ id: true, createdAt: true, lastLoginAt: true });
+export type InsertWebAccount = z.infer<typeof insertWebAccountSchema>;
+export type WebAccount = typeof webAccounts.$inferSelect;
+
+// ─── Web Lite: Web Account <-> User Link ────────────────────
+export const webAccountUserLinks = pgTable("web_account_user_links", {
+  id: serial("id").primaryKey(),
+  webAccountId: integer("web_account_id").notNull().references(() => webAccounts.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  role: text("role").notNull().default("OWNER"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertWebAccountUserLinkSchema = createInsertSchema(webAccountUserLinks).omit({ id: true, createdAt: true });
+export type InsertWebAccountUserLink = z.infer<typeof insertWebAccountUserLinkSchema>;
+export type WebAccountUserLink = typeof webAccountUserLinks.$inferSelect;
+
+// ─── Web Lite: Magic Link Token ─────────────────────────────
+export const magicLinkTokens = pgTable("magic_link_tokens", {
+  id: serial("id").primaryKey(),
+  webAccountId: integer("web_account_id").notNull().references(() => webAccounts.id),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("magic_link_tokens_hash_idx").on(table.tokenHash),
+]);
+
+export const insertMagicLinkTokenSchema = createInsertSchema(magicLinkTokens).omit({ id: true, createdAt: true, usedAt: true });
+export type InsertMagicLinkToken = z.infer<typeof insertMagicLinkTokenSchema>;
+export type MagicLinkToken = typeof magicLinkTokens.$inferSelect;
+
+// ─── Web Lite: Phone Link Code ──────────────────────────────
+export const phoneLinkCodes = pgTable("phone_link_codes", {
+  id: serial("id").primaryKey(),
+  webAccountId: integer("web_account_id").notNull().references(() => webAccounts.id),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  codeHash: text("code_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPhoneLinkCodeSchema = createInsertSchema(phoneLinkCodes).omit({ id: true, createdAt: true });
+export type InsertPhoneLinkCode = z.infer<typeof insertPhoneLinkCodeSchema>;
+export type PhoneLinkCode = typeof phoneLinkCodes.$inferSelect;
+
+// ─── Web Lite: Web Session ──────────────────────────────────
+export const webSessions = pgTable("web_sessions", {
+  id: serial("id").primaryKey(),
+  webAccountId: integer("web_account_id").notNull().references(() => webAccounts.id),
+  sessionToken: text("session_token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("web_sessions_token_idx").on(table.sessionToken),
+]);

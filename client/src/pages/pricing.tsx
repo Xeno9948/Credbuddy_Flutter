@@ -46,7 +46,8 @@ export default function Pricing() {
                 <ArrowLeft className="w-4 h-4" /> Home
               </Button>
             </Link>
-            <span className="font-bold text-slate-900">Pricing</span>
+            <img src="/credbuddy-logo.png" alt="CredBuddy" className="w-6 h-6" />
+            <span className="font-bold text-slate-900">CredBuddy Pricing</span>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/terms">

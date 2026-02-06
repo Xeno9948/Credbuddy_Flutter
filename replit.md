@@ -67,6 +67,14 @@ The project is a single monorepo (not split into workspace packages) with these 
 - `/partner/login` — Partner portal login
 - `/partner` — Partner dashboard
 - `/partner/applicant/:id` — Individual applicant detail view
+- `/web` — Web Lite landing page
+- `/web/login` — Web Lite email magic link login
+- `/web/auth/callback` — Magic link verification callback
+- `/web/app` — Web Lite score dashboard (requires auth + linked phone)
+- `/web/app/add` — Daily entry form
+- `/web/app/entries` — Entry history (14/30/90 days)
+- `/web/app/history` — Score history (14/30/90 days)
+- `/web/app/report` — Credit report status
 
 The main dashboard features a phone simulator component that mimics a WhatsApp interface, allowing users to interact with the chatbot. The admin dashboard on the right updates in real-time showing scoring data, charts, and feature breakdowns.
 
@@ -108,6 +116,13 @@ The main dashboard features a phone simulator component that mimics a WhatsApp i
 - `audit_logs` — System audit logging
 - `message_logs` — WhatsApp message logging (inbound/outbound)
 - `jobs` — DB-backed job queue (fallback for when Redis/BullMQ unavailable)
+
+**Web Lite Tables**:
+- `web_accounts` — Email-based web accounts for Web Lite users
+- `web_account_user_links` — Links web accounts to WhatsApp users (by phone)
+- `magic_link_tokens` — Hashed tokens for email magic link login
+- `phone_link_codes` — Hashed codes for WhatsApp phone verification
+- `web_sessions` — Server-side session tokens for Web Lite auth
 
 ### Explainable AI Module
 

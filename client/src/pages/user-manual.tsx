@@ -19,7 +19,8 @@ export default function UserManual() {
             </Button>
           </Link>
           <div className="h-6 w-px bg-emerald-800" />
-          <h1 className="font-display font-semibold text-lg">User Manual</h1>
+          <img src="/credbuddy-logo.png" alt="CredBuddy" className="w-7 h-7" />
+          <h1 className="font-display font-semibold text-lg">CredBuddy User Manual</h1>
         </div>
       </header>
 
