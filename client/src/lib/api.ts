@@ -186,8 +186,27 @@ export function usePartnerSearch(apiKey: string, query: string) {
 }
 
 // ─── Partner applicant detail ───────────────────────────
+export interface LenderExplainability {
+  headline: string;
+  scoreLine: string;
+  confidenceLine: string;
+  positiveDrivers: string[];
+  negativeDrivers: string[];
+  flags: string[];
+  improvements: string[];
+  disclaimer: string;
+}
+
+export interface ExplainabilityData {
+  lender: LenderExplainability;
+  lenderText: string;
+  entrepreneurText: string;
+  breakdown: any;
+  polished: boolean;
+}
+
 export function usePartnerApplicant(apiKey: string, userId: number | null) {
-  return useQuery<UserFull & { explanations: { reasons: string[]; tips: string[] } }>({
+  return useQuery<UserFull & { explainability: ExplainabilityData | null }>({
     queryKey: ["/api/partner/applicant", String(userId)],
     queryFn: async () => {
       const res = await fetch(`/api/partner/applicant/${userId}`, {

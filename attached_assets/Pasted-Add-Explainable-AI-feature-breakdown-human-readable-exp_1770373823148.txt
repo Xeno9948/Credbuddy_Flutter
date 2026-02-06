@@ -1,0 +1,168 @@
+Add Explainable AI (feature-breakdown → human-readable explanations) to the existing monorepo
+“AI Credit & Cashflow Assistant” (WhatsApp assistant + lender portal).
+
+GOAL
+Implement a deterministic + AI-assisted Explainable AI layer that:
+- converts scoring features into clear human explanations
+- works for TWO audiences:
+  1) Entrepreneur (WhatsApp-friendly, motivational)
+  2) Lender / credit analyst (neutral, structured)
+- NEVER recalculates scores
+- NEVER makes decisions
+- is legally safe (decision support only)
+
+ARCHITECTURE PRINCIPLES
+1) Scoring logic stays untouched
+2) Explainability is a pure interpretation layer
+3) Deterministic mapping first, LLM only for wording
+4) Always same output schema (JSON contract)
+
+LOCATION
+- Add all explainability logic in /packages/shared/explainability
+- Both apps (assistant + portal) must import and use this package
+
+INPUT (already available)
+- score (0–1000)
+- band (A/B/C/D)
+- confidence (0–1)
+- features (0–1 values):
+  data_discipline
+  revenue_stability
+  expense_pressure
+  buffer_behavior
+  trend_momentum
+  shock_recovery
+- flags (array of strings)
+- context: lookback_days, business_type
+
+STEP 1 — Feature → Text Mapping (deterministic)
+Create a mapping file:
+
+FEATURE_LABELS = {
+  data_discipline: {
+    positive: "Je vult je cijfers bijna elke dag in",
+    neutral: "Je vult je cijfers onregelmatig in",
+    negative: "Je vult je cijfers te weinig in"
+  },
+  revenue_stability: {
+    positive: "Je omzet is stabiel",
+    neutral: "Je omzet schommelt",
+    negative: "Je omzet wisselt sterk per dag"
+  },
+  expense_pressure: {
+    positive: "Je uitgaven zijn goed in verhouding tot je omzet",
+    neutral: "Je uitgaven drukken soms op je cashflow",
+    negative: "Je uitgaven zijn vaak te hoog"
+  },
+  buffer_behavior: {
+    positive: "Je hebt een goede financiële buffer",
+    neutral: "Je buffer is beperkt",
+    negative: "Je buffer is erg klein"
+  },
+  trend_momentum: {
+    positive: "Je omzettrend is stijgend",
+    neutral: "Je omzet blijft ongeveer gelijk",
+    negative: "Je omzettrend is dalend"
+  },
+  shock_recovery: {
+    positive: "Je herstelt snel na mindere dagen",
+    neutral: "Je herstel na dips is gemiddeld",
+    negative: "Het duurt lang voordat je herstelt na een dip"
+  }
+}
+
+Implement bucket logic:
+- value >= 0.7 → positive
+- value >= 0.4 → neutral
+- else → negative
+
+STEP 2 — Explainable JSON Output (STRICT SCHEMA)
+Implement a function:
+
+buildExplainableBreakdown(input) → JSON
+
+Output schema:
+{
+  summary: {
+    headline,
+    score_line,
+    confidence_line
+  },
+  drivers: {
+    positive: [max 3 strings],
+    negative: [max 2 strings]
+  },
+  improvements: [exactly 2 actionable tips],
+  disclaimer
+}
+
+Rules:
+- Improvements must be derived from NEGATIVE drivers
+- Never mention exact formulas
+- Always include “based on the last X days”
+- No guarantees, no advice
+
+STEP 3 — Audience-Specific Rendering
+
+Implement two renderers:
+
+A) renderForEntrepreneur(explainableJSON)
+- Short sentences
+- Friendly tone
+- WhatsApp-ready text
+- Max 2 emoji
+- Dutch language
+
+B) renderForLender(explainableJSON)
+- Neutral, professional tone
+- Bullet points
+- English language
+- Explicit mention of score, band, confidence, flags
+- “Decision-support only” disclaimer
+
+STEP 4 — Optional LLM Polishing (SAFE)
+If OPENAI_API_KEY is present:
+- Pass explainableJSON to LLM ONLY to improve wording
+- LLM must not add or remove facts
+- Use strict system prompts:
+  - “Do not calculate”
+  - “Do not advise”
+  - “Do not promise outcomes”
+If no API key:
+- Use deterministic text only
+
+STEP 5 — Integration
+
+Assistant App:
+- After each score calculation:
+  - Generate explainableJSON
+  - Render entrepreneur explanation
+  - Send via WhatsApp
+
+Portal App:
+- On applicant detail page:
+  - Render lender explanation
+  - Show score drivers + confidence
+  - Display disclaimer clearly
+
+STEP 6 — Files to Create
+/packages/shared/explainability/
+  ├── featureLabels.ts
+  ├── bucket.ts
+  ├── buildExplainableBreakdown.ts
+  ├── renderEntrepreneur.ts
+  ├── renderLender.ts
+  ├── llmPolisher.ts
+  └── index.ts
+
+STEP 7 — Quality
+- Add unit tests for bucket logic + explainable output
+- Add comments explaining legal safety choices
+- Ensure TypeScript strict typing
+- No breaking changes to scoring engine
+
+DELIVERABLE
+- Fully working Explainable AI layer
+- Used by both WhatsApp assistant and lender portal
+- Clear, human-readable explanations
+- Safe, consistent, production-ready

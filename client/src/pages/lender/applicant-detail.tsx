@@ -4,7 +4,7 @@ import { useReactToPrint } from "react-to-print";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Printer, Download, Info, Loader2 } from "lucide-react";
+import { ArrowLeft, Printer, Download, Info, Loader2, CheckCircle, AlertTriangle, Lightbulb } from "lucide-react";
 import { usePartnerApplicant } from "@/lib/api";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
@@ -31,9 +31,9 @@ export default function ApplicantDetail() {
     );
   }
 
-  const { user, profile, score, scoreHistory, explanations } = data;
+  const { user, profile, score, scoreHistory, explainability } = data;
 
-  const historyData = (scoreHistory || []).reverse().map((s, i) => ({
+  const historyData = (scoreHistory || []).reverse().map((s) => ({
     month: s.asOfDate,
     score: s.score,
   }));
@@ -64,6 +64,8 @@ export default function ApplicantDetail() {
   const confidence = score?.confidence ?? 50;
   const flags = score?.flags ?? [];
   const breakdown = score?.featureBreakdown ?? { dd: 0, rs: 0, ep: 0, bb: 0, tm: 0, sr: 0 };
+
+  const lender = explainability?.lender;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12 print:bg-white print:pb-0">
@@ -104,19 +106,71 @@ export default function ApplicantDetail() {
           <Card className="col-span-2 shadow-sm print:shadow-none print:border">
              <CardHeader className="pb-4">
                <CardTitle>Executive Summary</CardTitle>
-               <CardDescription>AI-generated risk assessment</CardDescription>
+               <CardDescription>AI-generated risk assessment (Explainable AI)</CardDescription>
              </CardHeader>
              <CardContent>
                 <div className="prose prose-sm text-slate-700 max-w-none">
-                  {explanations?.reasons?.map((reason, i) => (
-                    <p key={i} className="mb-2">{reason}</p>
-                  ))}
-                  {(!explanations?.reasons || explanations.reasons.length === 0) && (
+                  {lender ? (
+                    <>
+                      <h4 className="text-lg font-semibold text-slate-900 mt-0 mb-3">{lender.headline}</h4>
+                      <p className="text-sm text-slate-600 mb-1">{lender.scoreLine}</p>
+                      <p className="text-sm text-slate-600 mb-4">{lender.confidenceLine}</p>
+
+                      {lender.positiveDrivers.length > 0 && (
+                        <div className="mb-4">
+                          <h5 className="text-xs uppercase tracking-wider text-emerald-700 font-semibold mb-2 flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" /> Positive Indicators
+                          </h5>
+                          <ul className="space-y-1 list-none pl-0">
+                            {lender.positiveDrivers.map((d, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm" data-testid={`text-positive-driver-${i}`}>
+                                <span className="mt-1.5 block w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                <span>{d}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {lender.negativeDrivers.length > 0 && (
+                        <div className="mb-4">
+                          <h5 className="text-xs uppercase tracking-wider text-red-700 font-semibold mb-2 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" /> Risk Indicators
+                          </h5>
+                          <ul className="space-y-1 list-none pl-0">
+                            {lender.negativeDrivers.map((d, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm" data-testid={`text-negative-driver-${i}`}>
+                                <span className="mt-1.5 block w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                                <span>{d}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {lender.improvements.length > 0 && (
+                        <div className="mb-4">
+                          <h5 className="text-xs uppercase tracking-wider text-blue-700 font-semibold mb-2 flex items-center gap-1">
+                            <Lightbulb className="w-3 h-3" /> Recommended Actions
+                          </h5>
+                          <ul className="space-y-1 list-none pl-0">
+                            {lender.improvements.map((tip, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm" data-testid={`text-improvement-${i}`}>
+                                <span className="mt-1.5 block w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                                <span>{tip}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </>
+                  ) : (
                     <p className="mb-2">
                       <strong className="text-slate-900">{profile?.businessName ?? "Applicant"} ({profile?.businessType ?? "Unknown"})</strong> - 
                       Score analysis based on {data.entries?.length ?? 0} daily entries.
                     </p>
                   )}
+
                   <div className="flex flex-wrap gap-2 mt-4">
                     <Badge variant="outline" className={`${band === 'A' || band === 'B' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-700 bg-amber-50 border-amber-200'}`}>
                       Recommendation: {band === 'A' || band === 'B' ? 'Approve' : 'Review'} (Tier {band})
@@ -124,6 +178,11 @@ export default function ApplicantDetail() {
                     <Badge variant="outline" className="text-slate-600">
                       Confidence: {confidence}%
                     </Badge>
+                    {explainability?.polished && (
+                      <Badge variant="outline" className="text-violet-600 bg-violet-50 border-violet-200">
+                        AI-Enhanced Wording
+                      </Badge>
+                    )}
                   </div>
                 </div>
              </CardContent>
@@ -229,7 +288,9 @@ export default function ApplicantDetail() {
                 )}
                 <li className="flex items-start gap-2 pt-2 border-t border-amber-200/50 print:border-slate-200 mt-2">
                   <span className="mt-1 block w-1.5 h-1.5 rounded-full bg-slate-400 print:bg-black" />
-                  <span className="opacity-80">This report is for decision support only. Score v1 is experimental and based on self-reported cashflow data.</span>
+                  <span className="opacity-80">
+                    {lender?.disclaimer ?? "This report is for decision support only. Score v1 is experimental and based on self-reported cashflow data."}
+                  </span>
                 </li>
               </ul>
            </div>

@@ -1,12 +1,45 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { computeCreditScore, generateExplanations } from "./scoring";
+import { computeCreditScore } from "./scoring";
 import { createHash, randomBytes } from "crypto";
 import { z } from "zod";
+import {
+  buildExplainableBreakdown,
+  renderForEntrepreneur,
+  renderForLender,
+  renderForLenderText,
+  polishWithLLM,
+  type ExplainableInput,
+} from "@shared/explainability";
 
 function hashApiKey(key: string): string {
   return createHash("sha256").update(key).digest("hex");
+}
+
+function toExplainableInput(
+  score: number,
+  band: string,
+  confidence: number,
+  featureBreakdown: Record<string, number>,
+  flags: string[],
+  businessType: string
+): ExplainableInput {
+  return {
+    score,
+    band,
+    confidence: confidence / 100,
+    features: {
+      data_discipline: featureBreakdown.dd ?? 0,
+      revenue_stability: featureBreakdown.rs ?? 0,
+      expense_pressure: featureBreakdown.ep ?? 0,
+      buffer_behavior: featureBreakdown.bb ?? 0,
+      trend_momentum: featureBreakdown.tm ?? 0,
+      shock_recovery: featureBreakdown.sr ?? 0,
+    },
+    flags,
+    context: { lookback_days: 14, business_type: businessType },
+  };
 }
 
 // ─── Middleware: Partner auth via X-API-KEY ──────────────────
@@ -222,20 +255,29 @@ export async function registerRoutes(
         confidence: result.confidence,
         band: result.band,
         flagsJson: result.flags,
-        featureBreakdownJson: result.featureBreakdown,
+        featureBreakdownJson: result.featureBreakdown as any,
       });
 
-      const explanations = generateExplanations(
-        result.featureBreakdown,
-        result.flags,
-        "entrepreneur"
+      const explInput = toExplainableInput(
+        result.score, result.band, result.confidence,
+        result.featureBreakdown as any, result.flags, "Unknown"
       );
+      const explBreakdown = buildExplainableBreakdown(explInput, "nl");
+      const entrepreneurText = renderForEntrepreneur(explBreakdown);
+      const lenderExpl = renderForLender(explBreakdown);
+
+      const polished = await polishWithLLM(explBreakdown, entrepreneurText, renderForLenderText(explBreakdown));
 
       res.json({
         ...snapshot,
         featureBreakdown: result.featureBreakdown,
         flags: result.flags,
-        explanations,
+        explainability: {
+          entrepreneur: polished.entrepreneurText,
+          lender: lenderExpl,
+          breakdown: explBreakdown,
+          polished: polished.polished,
+        },
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -249,17 +291,20 @@ export async function registerRoutes(
       const snapshot = await storage.getLatestScore(userId);
       if (!snapshot) return res.status(404).json({ error: "No score available" });
 
-      const explanations = generateExplanations(
-        snapshot.featureBreakdownJson as any,
-        (snapshot.flagsJson as string[]) ?? [],
-        "entrepreneur"
-      );
+      const fb = snapshot.featureBreakdownJson as Record<string, number>;
+      const fl = (snapshot.flagsJson as string[]) ?? [];
+      const explInput = toExplainableInput(snapshot.score, snapshot.band, snapshot.confidence, fb, fl, "Unknown");
+      const explBreakdown = buildExplainableBreakdown(explInput, "nl");
 
       res.json({
         ...snapshot,
         featureBreakdown: snapshot.featureBreakdownJson,
         flags: snapshot.flagsJson,
-        explanations,
+        explainability: {
+          entrepreneur: renderForEntrepreneur(explBreakdown),
+          lender: renderForLender(explBreakdown),
+          breakdown: explBreakdown,
+        },
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -331,11 +376,19 @@ export async function registerRoutes(
           confidence: result.confidence,
           band: result.band,
           flagsJson: result.flags,
-          featureBreakdownJson: result.featureBreakdown,
+          featureBreakdownJson: result.featureBreakdown as any,
         });
 
-        const explanations = generateExplanations(result.featureBreakdown, result.flags, "entrepreneur");
-        reply = `📊 *Credit Score: ${result.score}/1000*\nBand: ${result.band} | Confidence: ${result.confidence}%\n\n${explanations.reasons.join("\n")}\n\n💡 ${explanations.tips[0] ?? ""}`;
+        const profile2 = await storage.getBusinessProfile(body.userId);
+        const explInput2 = toExplainableInput(
+          result.score, result.band, result.confidence,
+          result.featureBreakdown as any, result.flags,
+          profile2?.businessType ?? "Unknown"
+        );
+        const explBreakdown2 = buildExplainableBreakdown(explInput2, "nl");
+        const entrepreneurExpl = renderForEntrepreneur(explBreakdown2);
+        const polished2 = await polishWithLLM(explBreakdown2, entrepreneurExpl, "");
+        reply = polished2.entrepreneurText;
       } else if (lowerInput.match(/^r\s*\d+/i)) {
         const amount = parseInt(lowerInput.replace(/\D/g, ""));
         if (amount > 0) {
@@ -446,7 +499,7 @@ export async function registerRoutes(
         confidence: result.confidence,
         band: result.band,
         flagsJson: result.flags,
-        featureBreakdownJson: result.featureBreakdown,
+        featureBreakdownJson: result.featureBreakdown as any,
       });
 
       res.json({ ...snapshot, featureBreakdown: result.featureBreakdown, flags: result.flags });
@@ -532,7 +585,7 @@ export async function registerRoutes(
   // GET /api/partner/applicant/:id - Get full decision packet
   app.get("/api/partner/applicant/:id", partnerAuth, async (req, res) => {
     try {
-      const userId = parseInt(req.params.id);
+      const userId = parseInt(req.params.id as string);
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -541,7 +594,7 @@ export async function registerRoutes(
         partnerId: partner.id,
         action: "view_applicant",
         targetId: String(userId),
-        ip: req.ip ?? null,
+        ip: (req.ip as string) ?? null,
       });
 
       const profile = await storage.getBusinessProfile(userId);
@@ -550,9 +603,28 @@ export async function registerRoutes(
       const scoreHistory = await storage.getScoreHistory(userId, 12);
       const cashEstimate = await storage.getLatestCashEstimate(userId);
 
-      const explanations = latestScore
-        ? generateExplanations(latestScore.featureBreakdownJson as any, (latestScore.flagsJson as string[]) ?? [], "lender")
-        : { reasons: [], tips: [] };
+      let explainability = null;
+      if (latestScore) {
+        const fb = latestScore.featureBreakdownJson as Record<string, number>;
+        const fl = (latestScore.flagsJson as string[]) ?? [];
+        const explInput = toExplainableInput(
+          latestScore.score, latestScore.band, latestScore.confidence,
+          fb, fl, profile?.businessType ?? "Unknown"
+        );
+        const explBreakdown = buildExplainableBreakdown(explInput, "en");
+        const lenderExpl = renderForLender(explBreakdown);
+        const lenderText = renderForLenderText(explBreakdown);
+        const entrepreneurText = renderForEntrepreneur(buildExplainableBreakdown(explInput, "nl"));
+        const polished = await polishWithLLM(explBreakdown, entrepreneurText, lenderText);
+
+        explainability = {
+          lender: lenderExpl,
+          lenderText: polished.lenderText,
+          entrepreneurText: polished.entrepreneurText,
+          breakdown: explBreakdown,
+          polished: polished.polished,
+        };
+      }
 
       res.json({
         user,
@@ -569,7 +641,7 @@ export async function registerRoutes(
           flags: s.flagsJson,
         })),
         cashEstimate,
-        explanations,
+        explainability,
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -653,7 +725,7 @@ export async function registerRoutes(
         confidence: scoreResult.confidence,
         band: scoreResult.band,
         flagsJson: scoreResult.flags,
-        featureBreakdownJson: scoreResult.featureBreakdown,
+        featureBreakdownJson: scoreResult.featureBreakdown as any,
       });
 
       // Create demo partner
