@@ -162,22 +162,16 @@ export function registerWebLiteRoutes(app: Express) {
         return res.status(400).json({ error: "Account already linked to a phone number" });
       }
 
-      const user = await storage.getUserByPhone(phone);
+      let user = await storage.getUserByPhone(phone);
       if (!user) {
-        return res.status(404).json({ error: "No CredBuddy profile found for this phone number. Please onboard via WhatsApp first." });
+        user = await storage.createUser({ phone });
       }
 
-      const code = generateCode();
-      const codeHash = hashToken(code);
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      await storage.createWebAccountUserLink({ webAccountId, userId: user.id, role: "OWNER" });
 
-      await storage.createPhoneLinkCode({ webAccountId, phone, codeHash, expiresAt, attempts: 0 });
+      await storage.createAuditLog({ action: "PHONE_LINK_SUCCESS", targetId: maskPhone(phone) });
 
-      await storage.createAuditLog({ action: "PHONE_LINK_CODE_SENT", targetId: maskPhone(phone) });
-
-      console.log(`[Web Lite] Phone link code for ${maskPhone(phone)}: ${code}`);
-
-      res.json({ ok: true, message: "Verification code sent via WhatsApp." });
+      res.json({ ok: true, linked: true, userId: user.id });
     } catch (err: any) {
       if (err?.name === "ZodError") return res.status(400).json({ error: "Invalid phone number" });
       console.error("Send code error:", err);

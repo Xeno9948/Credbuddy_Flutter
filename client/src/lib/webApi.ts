@@ -119,12 +119,14 @@ export function useWebLogout() {
 }
 
 export function useSendPhoneCode() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (phone: string) =>
       webFetch("/api/web/phone/send-code", {
         method: "POST",
         body: JSON.stringify({ phone }),
       }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["web-me"] }),
   });
 }
 

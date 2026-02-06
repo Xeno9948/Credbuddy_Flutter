@@ -1,29 +1,24 @@
 import React, { useState } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Phone, CheckCircle } from "lucide-react";
-import { useSendPhoneCode, useVerifyPhoneCode } from "@/lib/webApi";
+import { useSendPhoneCode } from "@/lib/webApi";
 
 export default function LinkPhone() {
   const [phone, setPhone] = useState("+27");
-  const [code, setCode] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
+  const [, setLocation] = useLocation();
+  const linkPhone = useSendPhoneCode();
 
-  const sendCode = useSendPhoneCode();
-  const verifyCode = useVerifyPhoneCode();
-
-  const handleSendCode = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    sendCode.mutate(phone, {
-      onSuccess: () => setCodeSent(true),
+    linkPhone.mutate(phone, {
+      onSuccess: () => {
+        setTimeout(() => setLocation("/web/app"), 1500);
+      },
     });
-  };
-
-  const handleVerify = (e: React.FormEvent) => {
-    e.preventDefault();
-    verifyCode.mutate({ phone, code });
   };
 
   return (
@@ -35,19 +30,19 @@ export default function LinkPhone() {
             Link Your Phone
           </CardTitle>
           <p className="text-sm text-slate-600" data-testid="text-link-message">
-            Link your WhatsApp profile to access your CredBuddy data.
+            Enter your mobile number to link your CredBuddy profile.
           </p>
         </CardHeader>
         <CardContent>
-          {verifyCode.isSuccess ? (
+          {linkPhone.isSuccess ? (
             <div className="text-center space-y-3" data-testid="text-link-success">
               <CheckCircle className="w-12 h-12 text-emerald-600 mx-auto" />
-              <p className="text-sm text-slate-700">Phone linked successfully!</p>
+              <p className="text-sm text-slate-700">Phone linked successfully! Redirecting...</p>
             </div>
-          ) : !codeSent ? (
-            <form onSubmit={handleSendCode} className="space-y-4">
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number (E.164)</Label>
+                <Label htmlFor="phone">Mobile Number</Label>
                 <Input
                   id="phone"
                   type="tel"
@@ -58,51 +53,18 @@ export default function LinkPhone() {
                   data-testid="input-phone"
                 />
               </div>
-              {sendCode.isError && (
+              {linkPhone.isError && (
                 <p className="text-sm text-red-600" data-testid="text-phone-error">
-                  {sendCode.error?.message || "Failed to send code."}
+                  {linkPhone.error?.message || "Failed to link phone."}
                 </p>
               )}
               <Button
                 type="submit"
                 className="w-full bg-emerald-900 hover:bg-emerald-800 text-white"
-                disabled={sendCode.isPending}
-                data-testid="button-send-code"
+                disabled={linkPhone.isPending}
+                data-testid="button-link-phone"
               >
-                {sendCode.isPending ? "Sending..." : "Send Code"}
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerify} className="space-y-4">
-              <p className="text-sm text-slate-600 text-center">
-                A 6-digit code was sent to <strong>{phone}</strong>.
-              </p>
-              <div className="space-y-2">
-                <Label htmlFor="code">Verification Code</Label>
-                <Input
-                  id="code"
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  placeholder="000000"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  required
-                  data-testid="input-code"
-                />
-              </div>
-              {verifyCode.isError && (
-                <p className="text-sm text-red-600" data-testid="text-verify-error">
-                  {verifyCode.error?.message || "Invalid code. Please try again."}
-                </p>
-              )}
-              <Button
-                type="submit"
-                className="w-full bg-emerald-900 hover:bg-emerald-800 text-white"
-                disabled={verifyCode.isPending}
-                data-testid="button-verify"
-              >
-                {verifyCode.isPending ? "Verifying..." : "Verify"}
+                {linkPhone.isPending ? "Linking..." : "Link Phone"}
               </Button>
             </form>
           )}

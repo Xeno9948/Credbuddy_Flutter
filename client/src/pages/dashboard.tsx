@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { PhoneSimulator } from "@/components/phone-simulator";
 import { ChatInterface } from "@/components/chat-interface";
 import { AdminDashboard } from "@/components/admin-dashboard";
-import { BookOpen, Shield } from "lucide-react";
+import { BookOpen, Shield, Globe } from "lucide-react";
 
 export default function Dashboard() {
   return (
@@ -19,6 +19,11 @@ export default function Dashboard() {
            <Link href="/manual">
              <button className="flex items-center gap-1 text-xs text-slate-500 hover:text-emerald-700 bg-white/80 rounded-full px-3 py-1.5 shadow-sm transition-colors" data-testid="link-manual">
                <BookOpen className="w-3 h-3" /> Manual
+             </button>
+           </Link>
+           <Link href="/web">
+             <button className="flex items-center gap-1 text-xs text-slate-500 hover:text-emerald-700 bg-white/80 rounded-full px-3 py-1.5 shadow-sm transition-colors" data-testid="link-web-lite">
+               <Globe className="w-3 h-3" /> Web Lite
              </button>
            </Link>
            <Link href="/partner/login">
