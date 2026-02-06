@@ -1,14 +1,24 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useAppStore } from "@/lib/mock-store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { TrendingUp, AlertTriangle, ShieldCheck, DollarSign, Activity, Calendar } from "lucide-react";
+import { TrendingUp, AlertTriangle, ShieldCheck, DollarSign, Activity, Calendar, Info } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip as UiTooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function AdminDashboard() {
-  const { user } = useAppStore();
+  const { user, recalculateScore } = useAppStore();
+
+  // Force initial recalculation to sync the breakdown
+  useEffect(() => {
+    recalculateScore();
+  }, []);
 
   const chartData = [...user.entries].reverse().map(e => ({
     date: format(new Date(e.date), 'dd MMM'),
@@ -19,6 +29,16 @@ export function AdminDashboard() {
   const totalRev = user.entries.reduce((a, b) => a + b.revenueCents, 0) / 100;
   const totalExp = user.entries.reduce((a, b) => a + b.expenseCents, 0) / 100;
   const net = totalRev - totalExp;
+
+  const breakdown = user.creditScore.featureBreakdown;
+  const featureList = [
+    { label: "Data Discipline", val: breakdown.dd, weight: "20%", desc: "Consistency of submissions" },
+    { label: "Rev Stability", val: breakdown.rs, weight: "20%", desc: "Consistency of income" },
+    { label: "Expense Pressure", val: breakdown.ep, weight: "15%", desc: "Profit margin health" },
+    { label: "Buffer Behavior", val: breakdown.bb, weight: "20%", desc: "Cash reserves vs expenses" },
+    { label: "Trend Momentum", val: breakdown.tm, weight: "10%", desc: "Week-over-week growth" },
+    { label: "Shock Recovery", val: breakdown.sr, weight: "15%", desc: "Bounce back from bad days" },
+  ];
 
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -59,7 +79,7 @@ export function AdminDashboard() {
         <Card className="border-l-4 border-l-blue-600 shadow-sm hover:shadow-md transition-shadow">
            <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-               <DollarSign className="w-4 h-4 text-blue-600" /> Net Cashflow (7d)
+               <DollarSign className="w-4 h-4 text-blue-600" /> Net Cashflow (All Time)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -97,6 +117,40 @@ export function AdminDashboard() {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
+        {/* Score Breakdown (New) */}
+        <Card className="shadow-sm">
+           <CardHeader>
+             <CardTitle className="text-base">Score Breakdown</CardTitle>
+             <CardDescription>How the score is calculated</CardDescription>
+           </CardHeader>
+           <CardContent className="space-y-4">
+             {featureList.map((f, i) => (
+               <div key={i} className="flex items-center justify-between text-sm group">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-700">{f.label}</span>
+                    <UiTooltip>
+                      <TooltipTrigger>
+                        <Info className="w-3 h-3 text-slate-400 opacity-50 hover:opacity-100 transition-opacity" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{f.desc} (Weight: {f.weight})</p>
+                      </TooltipContent>
+                    </UiTooltip>
+                  </div>
+                  <div className="flex items-center gap-3">
+                     <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-emerald-500 transition-all duration-500 ease-out" 
+                          style={{ width: `${f.val * 100}%` }}
+                        />
+                     </div>
+                     <span className="w-8 text-right font-mono text-slate-500 text-xs">{(f.val * 100).toFixed(0)}</span>
+                  </div>
+               </div>
+             ))}
+           </CardContent>
+        </Card>
+
         {/* Chart Section */}
         <Card className="lg:col-span-2 shadow-sm">
           <CardHeader>
@@ -120,7 +174,7 @@ export function AdminDashboard() {
         </Card>
 
         {/* Recent Activity Feed */}
-        <Card className="shadow-sm flex flex-col">
+        <Card className="shadow-sm flex flex-col lg:col-span-3">
            <CardHeader>
              <CardTitle className="flex items-center gap-2">
                <Activity className="w-4 h-4" /> Recent Entries
