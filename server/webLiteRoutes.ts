@@ -64,7 +64,7 @@ export function registerWebLiteRoutes(app: Express) {
 
       console.log(`[Web Lite] Magic link for ${normalizedEmail}: ${magicUrl}`);
 
-      res.json({ ok: true, message: "Login link sent to your email." });
+      res.json({ ok: true, message: "Login link sent to your email.", magicUrl });
     } catch (err: any) {
       if (err?.name === "ZodError") return res.status(400).json({ error: "Invalid email address" });
       console.error("Magic link error:", err);
