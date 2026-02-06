@@ -60,11 +60,9 @@ export function registerWebLiteRoutes(app: Express) {
 
       await storage.createAuditLog({ action: "LOGIN_LINK_SENT", targetId: normalizedEmail });
 
-      const magicUrl = `${req.protocol}://${req.get("host")}/web/auth/callback?token=${token}`;
+      console.log(`[Web Lite] Magic link token created for ${normalizedEmail}`);
 
-      console.log(`[Web Lite] Magic link for ${normalizedEmail}: ${magicUrl}`);
-
-      res.json({ ok: true, message: "Login link sent to your email.", magicUrl });
+      res.json({ ok: true, token });
     } catch (err: any) {
       if (err?.name === "ZodError") return res.status(400).json({ error: "Invalid email address" });
       console.error("Magic link error:", err);
