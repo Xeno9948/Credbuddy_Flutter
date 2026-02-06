@@ -1,0 +1,163 @@
+Build a production-ready MVP: “AI Credit & Cashflow Assistant” for micro-entrepreneurs in South Africa (WhatsApp-first).
+
+GOAL
+A WhatsApp-based assistant that:
+- onboards entrepreneurs in <2 minutes
+- collects daily revenue + optional expenses
+- provides STATUS cashflow snapshot on demand
+- predicts shortfall risk within 10 days (simple model)
+- runs a “scenario engine” for loan simulation (“What if I borrow R1000?”)
+- computes Credit Score v1 (0–1000) + Flags + Confidence score
+- logs all inbound/outbound messages
+
+IMPORTANT
+This MVP is decision-support only. It must NOT present itself as a lender, must NOT offer loans, and must include disclaimers.
+
+TECH STACK
+- Node.js + Express (TypeScript)
+- PostgreSQL + Prisma
+- OpenAI API for natural language responses (LLM)
+- Meta WhatsApp Cloud API (Webhook + Send Message)
+- BullMQ + Redis for background jobs (reminders + nightly scoring). If Redis unavailable, implement a simple DB-backed queue.
+- Minimal admin page (server-rendered is fine) for viewing users, scores, daily entries, and message logs.
+
+WHATSAPP INTEGRATION
+- Implement GET /webhook verification endpoint (Meta)
+- Implement POST /webhook to receive inbound messages
+- Implement sendText(to, text) using WhatsApp Cloud API
+ENV VARS:
+WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_VERIFY_TOKEN,
+OPENAI_API_KEY, DATABASE_URL, ADMIN_PASSWORD,
+TZ_DEFAULT="Africa/Johannesburg"
+
+CORE COMMANDS (WhatsApp)
+1) START
+   - Ask: business name, business type (menu 1-4), notification preference (risk only / daily / weekly)
+   - Store BusinessProfile + ConversationState
+
+2) Daily input
+   - Ask “How much revenue today?” (accept plain numbers, R prefix, commas)
+   - Ask “Any expenses? e.g., 400 supplier”
+   - Create DailyEntry(date, revenueCents, expenseCents, note)
+   - If user says “NO”, skip expenses.
+
+3) STATUS
+   - Summarize last 7 days totals (revenue, expenses, net)
+   - Show simple insights: week-over-week delta
+   - Show risk warning if predicted shortfall within 10 days
+   - Keep response short and WhatsApp-friendly.
+
+4) SCENARIO
+   - Trigger phrases: “what if I borrow X”, “lend”, “loan X”, “R1000 loan”
+   - Ask 2 clarifying inputs if missing: term (months) and expected interest rate (%). Provide defaults: 3 months, 10% monthly (or configurable).
+   - Output: estimated monthly payment + impact on predicted cashflow + risk (low/medium/high)
+   - Add disclaimers.
+
+5) HELP
+   - show available commands and examples
+
+DATA MODEL (Prisma)
+Tables:
+- User(id, phone, createdAt, lastActiveAt)
+- BusinessProfile(id, userId, businessName, businessType, notificationPref, timezone, language)
+- ConversationState(userId, state, stateDataJson, updatedAt)
+- DailyEntry(id, userId, date, revenueCents, expenseCents, expenseNote, createdAt)
+- ScoreSnapshot(id, userId, asOfDate, score, confidence, band, flagsJson, featureBreakdownJson, createdAt)
+- MessageLog(id, userId, direction[inbound|outbound], text, rawJson, createdAt)
+- Job(id, type, payloadJson, status, runAt, attempts, lastError, createdAt)
+
+SCORING (Credit Score v1)
+Implement the following exactly (or as close as possible with given data):
+Compute features in 0..1 and weight into 0..1000 score.
+Lookback: last 14 days.
+
+F1 Data Discipline (DD):
+submission_rate = (# days with at least one DailyEntry in last 14) / 14
+map:
+<0.35 => 0.1
+0.35-0.60 => 0.4
+0.60-0.80 => 0.7
+>0.80 => 1.0
+
+F2 Revenue Stability (RS):
+cv = std(revenue)/max(mean(revenue), eps)
+RS = 1 - clamp(cv/1.0, 0, 1)
+
+F3 Expense Pressure (EP):
+if expense data available for >=7 days:
+net = revenue - expense
+margin = mean(net)/max(mean(revenue), eps)
+EP = clamp((margin + 0.10)/0.40, 0, 1)
+else EP=0.5 and reduce confidence.
+
+F4 Buffer Behavior (BB):
+MVP: ask user once per week “cash available estimate?”
+Store in stateDataJson as cashAvailableCents with timestamp.
+buffer_days = cashAvailable / max(avg_daily_expense, eps)
+BB = clamp(buffer_days/7, 0, 1)
+If missing, BB=0.4 and reduce confidence.
+
+F5 Trend Momentum (TM):
+delta = (mean_rev_last7 - mean_rev_prev7)/max(mean_rev_prev7, eps)
+TM = clamp((delta + 0.10)/0.30, 0, 1)
+
+F6 Shock Recovery (SR):
+Define dip day: revenue < 0.5*mean_rev_14
+For each dip, measure days until revenue >= mean_rev_14
+avg_recovery_days
+SR = 1 - clamp(avg_recovery_days/7, 0, 1)
+If no dips, SR=0.8
+
+Weighted score (0..1):
+0.20*DD + 0.20*RS + 0.15*EP + 0.20*BB + 0.10*TM + 0.15*SR
+Score = round(1000 * weighted)
+
+FLAGS
+R1 Low reliability: submission_rate < 0.50
+R2 Sustained deficit: net<0 for >=4 of last 7 days (if expenses present; else skip)
+R3 High volatility: cv > 0.9
+R4 Low buffer: buffer_days < 2 (if cash available present)
+R5 Declining revenue: delta < -0.15
+
+CONFIDENCE (0..1)
+data_days = # days with revenue in last 14
+has_expenses = (expense present on >=7 days)
+has_buffer = (cash available within last 7 days)
+conf = 0.5 + 0.03*data_days + (0.10 if has_expenses else 0) + (0.10 if has_buffer else 0)
+conf = clamp(conf, 0, 1)
+
+BANDS
+A pre-approve: score>=720 AND flags<=1 AND conf>=0.7
+B small/step-up: score 620-719 AND flags<=2 AND conf>=0.65
+C manual review: score 520-619 OR flags==3 AND conf>=0.6
+D decline/improve: score<520 OR conf<0.6 OR flags>=4
+
+SHORTFALL PREDICTION (MVP)
+Use last 14 days mean net daily (revenue-expense; if no expenses assume expense=0.6*revenue as heuristic configurable).
+If user cash balance unknown, assume 0 and only provide “risk indicator”.
+Alert if projected balance < 0 within 10 days.
+
+LLM PROMPTS
+Create prompt templates:
+- “cashflow snapshot” (short bullet list, ZAR, friendly)
+- “risk warning” (no fear mongering, propose 3 options)
+- “scenario engine explanation” (include disclaimers)
+The LLM must not claim certainty; use “estimate”, “based on the last 14 days”, etc.
+
+ADMIN UI
+- /admin login with ADMIN_PASSWORD
+- Users list with last active, latest score/band/confidence
+- User detail: daily entries table, score history, message logs
+- Button to trigger score recalculation for a user
+
+QUALITY
+- Provide folder structure
+- README with Meta WhatsApp setup steps
+- .env.example
+- Basic input validation, error handling, rate limiting
+- One-command run in Replit
+DELIVERABLES
+- Working WhatsApp webhook + send loop
+- Onboarding + STATUS + SCENARIO
+- Scoring engine + persistence
+- Admin UI
