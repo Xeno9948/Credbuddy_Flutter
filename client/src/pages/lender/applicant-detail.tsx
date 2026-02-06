@@ -1,5 +1,6 @@
 import React, { useRef } from "react";
 import { Link } from "wouter";
+import { useReactToPrint } from "react-to-print";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 export default function ApplicantDetail() {
   const { user } = useAppStore();
   const packetRef = useRef<HTMLDivElement>(null);
+  const reactToPrintFn = useReactToPrint({ contentRef: packetRef });
 
   // Mock historical data for trend chart
   const historyData = Array.from({ length: 12 }, (_, i) => ({
@@ -18,8 +20,7 @@ export default function ApplicantDetail() {
   }));
 
   const handlePrint = () => {
-    // In a real app this would trigger a PDF generation service or window.print() with print-specific CSS
-    window.print();
+    reactToPrintFn();
   };
 
   return (

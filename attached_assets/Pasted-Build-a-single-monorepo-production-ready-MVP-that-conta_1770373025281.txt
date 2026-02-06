@@ -1,0 +1,185 @@
+Build a single monorepo (production-ready MVP) that contains TWO apps sharing ONE PostgreSQL database:
+
+APP 1 (WhatsApp Assistant):
+- WhatsApp-first “AI Credit & Cashflow Assistant” for micro-entrepreneurs in South Africa
+- Onboarding, daily revenue/expenses, STATUS, SCENARIO, scoring engine (Credit Score v1), message logs
+- Meta WhatsApp Cloud API webhook + send message
+
+APP 2 (Lender Partner Portal + Decision API):
+- Partner-facing web portal + read-only API
+- Search applicants, view score/band/confidence/flags, score history, download decision packet PDF
+- Partner API keys, audit logs, rate limiting
+
+MONOREPO REQUIREMENTS
+- Use Node.js + TypeScript for BOTH apps to reduce complexity
+- Use pnpm workspaces (or npm workspaces) with packages:
+  /apps/assistant
+  /apps/portal
+  /packages/shared (shared types, scoring engine, utilities)
+  /packages/db (Prisma schema + client)
+- Single Prisma schema in /packages/db
+- Single PostgreSQL database (DATABASE_URL)
+- One-command dev start from repo root that runs both apps concurrently
+
+TECH STACK
+- Node.js + Express (TypeScript)
+- PostgreSQL + Prisma
+- OpenAI API (optional but supported)
+- Meta WhatsApp Cloud API
+- BullMQ + Redis (optional). If Redis not available, implement DB-backed queue fallback.
+- PDF generation for decision packet: use Playwright (preferred) or pdfkit as fallback
+- Basic server-rendered pages for portal (EJS/Handlebars) or minimal React; keep UI simple.
+
+ENV VARS (.env.example in repo root)
+DATABASE_URL=
+OPENAI_API_KEY=
+WHATSAPP_TOKEN=
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_VERIFY_TOKEN=
+ADMIN_PASSWORD=
+TZ_DEFAULT=Africa/Johannesburg
+PORTAL_BASE_URL=http://localhost:4000
+ASSISTANT_BASE_URL=http://localhost:3000
+REDIS_URL= (optional)
+
+SHARED DB MODEL (Prisma) — implement these tables
+- User(id, phone, createdAt, lastActiveAt)
+- BusinessProfile(id, userId, businessName, businessType, notificationPref, timezone, language)
+- ConversationState(userId, state, stateDataJson, updatedAt)
+- DailyEntry(id, userId, date, revenueCents, expenseCents, expenseNote, createdAt)
+- CashEstimate(id, userId, asOfDate, cashAvailableCents, createdAt)   // for buffer behavior
+- ScoreSnapshot(id, userId, asOfDate, score, confidence, band, flagsJson, featureBreakdownJson, createdAt)
+
+- Partner(id, name, apiKeyHash, createdAt, isActive)
+- PartnerUserAccess(id, partnerId, userId, createdAt)  // which applicants a partner can view
+- DecisionRequest(id, partnerId, userId, requestedAt, status, notes)
+- AuditLog(id, partnerId, action, targetId, ip, createdAt)
+
+- MessageLog(id, userId, direction[inbound|outbound], text, rawJson, createdAt)
+
+SCORING ENGINE (in /packages/shared) — implement Credit Score v1 EXACTLY
+Lookback: last 14 days.
+
+FEATURES (0..1):
+F1 Data Discipline (DD):
+submission_rate = (# days with DailyEntry in last 14) / 14
+map:
+<0.35 => 0.1
+0.35-0.60 => 0.4
+0.60-0.80 => 0.7
+>0.80 => 1.0
+
+F2 Revenue Stability (RS):
+cv = std(revenue)/max(mean(revenue), eps)
+RS = 1 - clamp(cv/1.0, 0, 1)
+
+F3 Expense Pressure (EP):
+if expense present on >=7 days:
+net = revenue - expense
+margin = mean(net)/max(mean(revenue), eps)
+EP = clamp((margin + 0.10)/0.40, 0, 1)
+else EP=0.5 (and confidence should reflect missing expenses)
+
+F4 Buffer Behavior (BB):
+Use CashEstimate within last 7 days if present.
+avg_daily_expense = mean(expense) over last 14 (if missing use 0.6*mean(revenue) heuristic)
+buffer_days = cashAvailable / max(avg_daily_expense, eps)
+BB = clamp(buffer_days/7, 0, 1)
+If missing CashEstimate: BB=0.4 (and confidence should reflect missing buffer)
+
+F5 Trend Momentum (TM):
+delta = (mean_rev_last7 - mean_rev_prev7)/max(mean_rev_prev7, eps)
+TM = clamp((delta + 0.10)/0.30, 0, 1)
+
+F6 Shock Recovery (SR):
+dip day: revenue < 0.5*mean_rev_14
+for each dip: days until revenue >= mean_rev_14
+avg_recovery_days
+SR = 1 - clamp(avg_recovery_days/7, 0, 1)
+If no dips: SR=0.8
+
+WEIGHTS:
+score_0_1 = 0.20*DD + 0.20*RS + 0.15*EP + 0.20*BB + 0.10*TM + 0.15*SR
+score = round(1000 * score_0_1)
+
+FLAGS:
+R1 Low reliability: submission_rate < 0.50
+R2 Sustained deficit: net<0 for >=4 of last 7 days (only if enough expense data)
+R3 High volatility: cv > 0.9
+R4 Low buffer: buffer_days < 2 (only if CashEstimate present)
+R5 Declining revenue: delta < -0.15
+
+CONFIDENCE (0..1):
+data_days = # days with revenue in last 14
+has_expenses = expense present on >=7 days
+has_buffer = CashEstimate within last 7 days
+conf = 0.5 + 0.03*data_days + (0.10 if has_expenses else 0) + (0.10 if has_buffer else 0)
+conf = clamp(conf, 0, 1)
+
+BANDS:
+A pre-approve: score>=720 AND flags<=1 AND conf>=0.7
+B small/step-up: score 620-719 AND flags<=2 AND conf>=0.65
+C manual review: score 520-619 OR flags==3 AND conf>=0.6
+D decline/improve: score<520 OR conf<0.6 OR flags>=4
+
+Also implement an “explanations” generator in shared package:
+- Given feature breakdown + flags, return 3–5 human-readable reasons and 2 improvement tips
+- Keep language non-legal: “estimate”, “based on last 14 days”
+- Provide both entrepreneur-facing and lender-facing versions.
+
+ASSISTANT APP DETAILS (/apps/assistant)
+Routes:
+- GET /webhook (Meta verification)
+- POST /webhook (inbound messages)
+- POST /internal/recalc-score (admin protected)
+Conversation State Machine:
+- idle, onboarding_business_name, onboarding_business_type, onboarding_notification_pref,
+  daily_revenue, daily_expense, cash_estimate_prompt
+Commands:
+- START, STATUS, HELP
+- SCENARIO triggered by phrases containing “loan”, “borrow”, “lend”, “R####”
+Shortfall prediction:
+- use last 14-day mean net; if expenses missing use expense=0.6*revenue heuristic
+- assume cash balance from latest CashEstimate; if absent, show “risk indicator” only
+Reminders:
+- optional daily prompt based on notificationPref
+- schedule with BullMQ/Redis or fallback cron + DB
+
+LLM USAGE (optional but supported)
+- If OPENAI_API_KEY is set, use LLM to polish responses.
+- If not set, use deterministic templates.
+Never offer loans; only simulate scenarios and suggest “talk to a partner lender”.
+
+PORTAL APP DETAILS (/apps/portal)
+Auth:
+- Admin login with ADMIN_PASSWORD for managing partners
+- Partner API keys for API endpoints (X-API-KEY)
+UI pages:
+- /admin/login
+- /admin/partners (create/disable partner keys; display key ONCE then hash)
+- /admin/applicants/search (by phone)
+- /admin/applicants/:id (profile + latest score + history + flags + explanations + tips)
+- Button “Download Decision Packet” (PDF)
+API endpoints (read-only, partner auth):
+- GET /api/v1/users?phone=...
+- GET /api/v1/users/:userId/score/latest
+- GET /api/v1/users/:userId/score/history?days=90
+- GET /api/v1/users/:userId/decision-packet (PDF)
+Access control:
+- Only allow partner to view users present in PartnerUserAccess (or implement a request/approve flow using DecisionRequest)
+
+AUDIT LOGGING
+- Log every partner API call and every applicant view.
+
+QUALITY / DEVEX
+- Provide README with setup steps for Meta WhatsApp Cloud API, webhook verification, and local tunneling (ngrok)
+- Provide .env.example and clear run commands
+- Include basic tests for scoring functions in /packages/shared
+- Add input validation for amounts, phone normalization (E.164), and rate limiting
+- Ensure it runs in Replit with one command (e.g., `pnpm dev`)
+
+DELIVERABLES
+- Full monorepo with both apps working locally
+- Shared scoring package used by both apps
+- Prisma migrations + seed script (optional)
+- Clean, commented code

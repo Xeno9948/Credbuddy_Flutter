@@ -4,13 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, User, FileText, ArrowRight, Bell, Menu } from "lucide-react";
+import { Search, User, FileText, ArrowRight, Bell, Menu, Plus } from "lucide-react";
 import { useAppStore } from "@/lib/mock-store";
 
 export default function LenderDashboard() {
   const [, setLocation] = useLocation();
   const [query, setQuery] = useState("");
-  const { user } = useAppStore(); // In a real app, this would be a list from the API
+  const { user } = useAppStore(); 
 
   // Mock list of recent applicants
   const recentApplicants = [
@@ -21,8 +21,8 @@ export default function LenderDashboard() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // In mock, always go to the main user detail if searching
     if (query) {
+       // Mock finding the user by ID or name
        setLocation("/partner/applicant/1");
     }
   };
@@ -68,6 +68,12 @@ export default function LenderDashboard() {
                Search
              </Button>
            </form>
+           
+           <div className="flex justify-center gap-2">
+              <Button variant="outline" size="sm" className="text-xs" onClick={() => setQuery("072 555 1234")}>
+                 Use Demo Phone
+              </Button>
+           </div>
         </div>
 
         {/* Recent Activity */}
@@ -105,6 +111,16 @@ export default function LenderDashboard() {
                 </Card>
               </Link>
             ))}
+             
+             {/* New Applicant Card Placeholder */}
+             <Card className="border-dashed border-2 border-slate-200 bg-slate-50 flex items-center justify-center hover:border-emerald-300 transition-colors cursor-pointer opacity-70 hover:opacity-100">
+                <CardContent className="p-5 flex flex-col items-center gap-2 text-slate-400">
+                   <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mb-1">
+                      <Plus className="w-5 h-5" />
+                   </div>
+                   <span className="text-sm font-medium">Invite New Applicant</span>
+                </CardContent>
+             </Card>
           </div>
         </div>
 
