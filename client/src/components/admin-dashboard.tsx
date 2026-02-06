@@ -1,9 +1,11 @@
-import React, { useEffect } from "react";
-import { useAppStore } from "@/lib/mock-store";
+import React from "react";
+import { useSession } from "@/lib/session";
+import { useUserDetail } from "@/lib/api";
+import type { FeatureBreakdown } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { TrendingUp, AlertTriangle, ShieldCheck, DollarSign, Activity, Calendar, Info } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { TrendingUp, AlertTriangle, ShieldCheck, DollarSign, Activity, Calendar, Info, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
@@ -13,24 +15,36 @@ import {
 } from "@/components/ui/tooltip";
 
 export function AdminDashboard() {
-  const { user, recalculateScore } = useAppStore();
+  const { userId } = useSession();
+  const { data, isLoading } = useUserDetail(userId);
 
-  // Force initial recalculation to sync the breakdown
-  useEffect(() => {
-    recalculateScore();
-  }, []);
+  if (isLoading || !data) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <span className="ml-3 text-slate-500">Loading dashboard data...</span>
+      </div>
+    );
+  }
 
-  const chartData = [...user.entries].reverse().map(e => ({
+  const { user, profile, entries, score, cashEstimate } = data;
+
+  const chartData = [...entries].reverse().map(e => ({
     date: format(new Date(e.date), 'dd MMM'),
     revenue: e.revenueCents / 100,
     expense: e.expenseCents / 100
   }));
 
-  const totalRev = user.entries.reduce((a, b) => a + b.revenueCents, 0) / 100;
-  const totalExp = user.entries.reduce((a, b) => a + b.expenseCents, 0) / 100;
+  const totalRev = entries.reduce((a, b) => a + b.revenueCents, 0) / 100;
+  const totalExp = entries.reduce((a, b) => a + b.expenseCents, 0) / 100;
   const net = totalRev - totalExp;
 
-  const breakdown = user.creditScore.featureBreakdown;
+  const breakdown: FeatureBreakdown = score?.featureBreakdown ?? { dd: 0, rs: 0, ep: 0, bb: 0, tm: 0, sr: 0 };
+  const flags = score?.flags ?? [];
+  const scoreVal = score?.score ?? 0;
+  const band = score?.band ?? "D";
+  const confidence = score?.confidence ?? 50;
+
   const featureList = [
     { label: "Data Discipline", val: breakdown.dd, weight: "20%", desc: "Consistency of submissions" },
     { label: "Rev Stability", val: breakdown.rs, weight: "20%", desc: "Consistency of income" },
@@ -43,23 +57,21 @@ export function AdminDashboard() {
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
       
-      {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-display font-bold text-slate-900 tracking-tight">User Overview</h1>
-          <p className="text-slate-500">Managing risk and cashflow for <span className="font-semibold text-slate-900">{user.businessName}</span></p>
+          <h1 className="text-3xl font-display font-bold text-slate-900 tracking-tight" data-testid="text-dashboard-title">User Overview</h1>
+          <p className="text-slate-500">Managing risk and cashflow for <span className="font-semibold text-slate-900" data-testid="text-business-name">{profile?.businessName ?? user.phone}</span></p>
         </div>
         <div className="flex gap-2">
             <Badge variant="outline" className="px-3 py-1 text-xs uppercase tracking-wider font-mono">
                Status: Active
             </Badge>
             <Badge className="px-3 py-1 text-xs uppercase tracking-wider font-mono bg-emerald-600">
-               Last Active: Today
+               Last Active: {format(new Date(user.lastActiveAt), 'dd MMM')}
             </Badge>
         </div>
       </div>
 
-      {/* Score Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-l-4 border-l-emerald-600 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-2">
@@ -69,21 +81,21 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-display font-bold text-slate-900">{user.creditScore.score}</span>
-              <span className="text-sm font-medium text-emerald-600">Band {user.creditScore.band}</span>
+              <span className="text-4xl font-display font-bold text-slate-900" data-testid="text-credit-score">{scoreVal}</span>
+              <span className="text-sm font-medium text-emerald-600" data-testid="text-credit-band">Band {band}</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Confidence: {(user.creditScore.confidence * 100).toFixed(0)}%</p>
+            <p className="text-xs text-muted-foreground mt-1" data-testid="text-confidence">Confidence: {confidence}%</p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-blue-600 shadow-sm hover:shadow-md transition-shadow">
            <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-               <DollarSign className="w-4 h-4 text-blue-600" /> Net Cashflow (All Time)
+               <DollarSign className="w-4 h-4 text-blue-600" /> Net Cashflow (14 Days)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-display font-bold text-slate-900">
+            <div className="text-4xl font-display font-bold text-slate-900" data-testid="text-net-cashflow">
               R{net.toLocaleString()}
             </div>
             <div className="flex gap-4 mt-1 text-xs text-muted-foreground">
@@ -100,24 +112,22 @@ export function AdminDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {user.creditScore.flags.length > 0 ? (
-              <div className="space-y-1">
-                {user.creditScore.flags.map((flag, i) => (
+            {flags.length > 0 ? (
+              <div className="space-y-1" data-testid="text-risk-flags">
+                {flags.map((flag, i) => (
                   <Badge key={i} variant="destructive" className="mr-1">{flag}</Badge>
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-slate-500 italic">No active risk flags</div>
+              <div className="text-sm text-slate-500 italic" data-testid="text-no-flags">No active risk flags</div>
             )}
             <p className="text-xs text-muted-foreground mt-2">Shortfall Prediction: <span className="text-emerald-600 font-medium">Low Risk</span></p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Score Breakdown (New) */}
         <Card className="shadow-sm">
            <CardHeader>
              <CardTitle className="text-base">Score Breakdown</CardTitle>
@@ -125,7 +135,7 @@ export function AdminDashboard() {
            </CardHeader>
            <CardContent className="space-y-4">
              {featureList.map((f, i) => (
-               <div key={i} className="flex items-center justify-between text-sm group">
+               <div key={i} className="flex items-center justify-between text-sm group" data-testid={`text-feature-${f.label.toLowerCase().replace(/\s/g, '-')}`}>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-slate-700">{f.label}</span>
                     <UiTooltip>
@@ -151,11 +161,10 @@ export function AdminDashboard() {
            </CardContent>
         </Card>
 
-        {/* Chart Section */}
         <Card className="lg:col-span-2 shadow-sm">
           <CardHeader>
              <CardTitle>Cashflow Velocity</CardTitle>
-             <CardDescription>Daily revenue vs expenses for the last 7 days</CardDescription>
+             <CardDescription>Daily revenue vs expenses for the last 14 days</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -173,7 +182,6 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Recent Activity Feed */}
         <Card className="shadow-sm flex flex-col lg:col-span-3">
            <CardHeader>
              <CardTitle className="flex items-center gap-2">
@@ -182,8 +190,8 @@ export function AdminDashboard() {
            </CardHeader>
            <CardContent className="flex-1 overflow-auto pr-2">
              <div className="space-y-4">
-               {user.entries.map((entry) => (
-                 <div key={entry.id} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+               {entries.map((entry) => (
+                 <div key={entry.id} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0" data-testid={`row-entry-${entry.id}`}>
                     <div className="flex items-center gap-3">
                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
                           <Calendar size={14} />
@@ -201,6 +209,9 @@ export function AdminDashboard() {
                     </div>
                  </div>
                ))}
+               {entries.length === 0 && (
+                 <p className="text-sm text-slate-400 italic text-center py-4">No entries yet. Use the chat to log revenue.</p>
+               )}
              </div>
            </CardContent>
         </Card>
