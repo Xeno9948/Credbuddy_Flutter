@@ -185,6 +185,48 @@ export function usePartnerSearch(apiKey: string, query: string) {
   });
 }
 
+// ─── Partner dashboard stats ────────────────────────────
+export interface PartnerDashboardStats {
+  totalApplicants: number;
+  avgScore: number;
+  bandDist: Record<string, number>;
+  highRisk: number;
+  lowRisk: number;
+  flaggedApplicants: {
+    id: number;
+    phone: string;
+    businessName: string | null;
+    businessType: string | null;
+    score: number;
+    band: string;
+    confidence: number;
+    flags: string[];
+  }[];
+  recentActivity: {
+    id: number;
+    phone: string;
+    businessName: string | null;
+    score: number;
+    band: string;
+    updatedAt: string;
+  }[];
+}
+
+export function usePartnerDashboard(apiKey: string) {
+  return useQuery<PartnerDashboardStats>({
+    queryKey: ["/api/partner/dashboard"],
+    queryFn: async () => {
+      const res = await fetch("/api/partner/dashboard", {
+        headers: { "X-API-KEY": apiKey },
+      });
+      if (!res.ok) throw new Error("Failed to load dashboard");
+      return res.json();
+    },
+    enabled: !!apiKey,
+    refetchInterval: 5000,
+  });
+}
+
 // ─── Partner applicant detail ───────────────────────────
 export interface LenderExplainability {
   headline: string;

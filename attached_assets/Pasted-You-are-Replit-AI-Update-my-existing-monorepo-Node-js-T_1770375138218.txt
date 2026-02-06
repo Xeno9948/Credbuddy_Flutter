@@ -1,0 +1,122 @@
+You are Replit AI. Update my existing monorepo (Node.js + TypeScript, Express, Prisma, PostgreSQL) for the “AI Credit & Cashflow Assistant” so it becomes a PURE CREDIT CHECKER product (decision-support only). Implement 3 things: (1) Portal UX changes, (2) Decision Packet PDF, (3) Pricing + contract surfaces (UI copy + terms page). Do NOT implement any lending/approve/decline flows.
+
+PRIMARY OBJECTIVE
+Make it unambiguous everywhere that we are NOT a lender, we do NOT approve/decline, and we provide credit risk assessment information only.
+
+SCOPE
+A) Portal UX (credit-checker only)
+B) Decision Packet PDF generation + secure sharing
+C) Pricing plans + Terms/Disclaimers page (public + portal)
+
+A) PORTAL UX REQUIREMENTS (REMOVE LENDING)
+1) Remove any “Approve / Decline / Offer / Loan” buttons, routes, models, and UI text.
+2) Replace with credit-checker actions ONLY:
+   - “Download Credit Report (PDF)”
+   - “Request updated assessment” (recompute score + explanation)
+   - “Share secure link” (time-limited link to a view-only report)
+3) Applicant detail page layout (must implement):
+   - Header block:
+     - “Credit Risk Assessment”
+     - Score: ### (Band A/B/C/D)
+     - Confidence: 0.xx with label: Low/Medium/Good/Strong
+     - “Based on the last 14 days”
+   - “Risk Indicators” block (no red/green, use neutral/amber)
+     - Revenue stability: Good/Medium/Poor derived from feature revenue_stability
+     - Cash buffer: Good/Medium/Poor derived from feature buffer_behavior
+     - Data discipline: Good/Medium/Poor derived from feature data_discipline
+     - Trend momentum: Up/Flat/Down derived from feature trend_momentum
+   - “Explainable Summary” block:
+     - Use existing Explainable AI layer outputs (drivers + improvements) and render lender tone in English.
+     - Show flags (if any)
+   - “Score History” block:
+     - Show 14/30/90 day score line chart (simple) AND confidence line (or confidence value list if charts are hard).
+   - “Data Coverage” block:
+     - Active days in last 14
+     - Expense tracking: Full/Partial/None
+     - Cash estimates: Provided count
+4) Add clear disclaimer banner on applicant pages:
+   - “Decision-support only. Final lending decision remains with the lender.”
+
+B) DECISION PACKET PDF (CREDIT REPORT)
+Implement on-demand PDF generation for a given userId:
+- Route (partner auth): GET /api/v1/users/:userId/credit-report.pdf
+- Route (portal UI): “Download Credit Report (PDF)” button calls the API and downloads file.
+PDF must be max 2 pages and include:
+Page 1:
+- Title: “Credit Risk Assessment Report”
+- Generated date/time
+- Business name + business type + phone (masked except last 3 digits)
+- Assessment period: “Last 14 days”
+- Score block: Score, Band, Confidence
+- Explainable summary:
+  - Strengths (max 2)
+  - Risk indicators (max 2)
+  - Flags list
+- Disclaimer text (see below)
+Page 2:
+- Risk indicators table:
+  - Revenue stability / Cash buffer / Data discipline / Trend momentum
+- Score history (14/30/90) – if chart is hard, include a small table with dates and scores
+- Data coverage:
+  - Active days (14d), Expense tracking level, Cash estimates count
+- Disclaimer repeated
+
+PDF ENGINE
+Prefer Playwright HTML->PDF in Node. If not possible in Replit, use pdfkit as fallback.
+Create HTML template for the report in /apps/portal/templates/credit-report.html (or similar).
+Ensure consistent styling and easy readability.
+
+SECURE SHARING LINK (MVP)
+Implement shareable link:
+- Create table CreditReportShareLink(id, userId, tokenHash, expiresAt, createdAt, createdByPartnerId)
+- Add UI action: “Share secure link”
+- Generate a random token (display only once) and store hash
+- Link route: GET /share/:token
+  - Validates token hash + expiry
+  - Renders view-only report page in browser (NOT PDF)
+  - Shows same disclaimer
+- Add AuditLog entries for link creation and link views
+
+C) PRICING + TERMS
+1) Add a public page /pricing showing:
+- Pay-per-check: €2.50 per check (example)
+- Starter: €99/month includes 100 checks
+- Growth: €299/month includes 500 checks
+- Scale: €799/month includes 2000 checks
+Add “Contact sales” link (mailto placeholder)
+2) Add /terms page with clear positioning:
+- “We provide credit risk assessments and decision-support information only.”
+- “We do not provide loans, do not approve/decline applications.”
+- “Final decisions remain with lenders.”
+- Liability cap placeholder text.
+3) Add the same disclaimer footer in portal + share pages + PDFs.
+
+DATA / BACKEND INTEGRATION
+- Use existing Prisma schema and add:
+  - CreditReportShareLink
+  - (Optional) DecisionPacket table if you want to store generated reports metadata
+- Add AuditLog events for:
+  - REPORT_PDF_DOWNLOADED
+  - REPORT_LINK_CREATED
+  - REPORT_LINK_VIEWED
+  - SCORE_RECALC_REQUESTED
+
+REQUEST UPDATED ASSESSMENT
+- Add portal button “Request updated assessment”
+- Calls a protected internal endpoint that triggers recalculation (use existing recalculation logic)
+- Store AuditLog SCORE_RECALC_REQUESTED
+
+SECURITY
+- Partner API key auth for API endpoints (X-API-KEY)
+- Admin auth for managing partners (existing)
+- Rate limit share link route
+- Mask PII in PDF and share views (phone masked)
+
+DELIVERABLES
+- Updated portal UI with credit-checker-only UX
+- Working PDF generation endpoint + button
+- Working secure share link flow
+- Pricing + Terms pages
+- Updated Prisma migrations
+- Updated README: how to use as a credit checker product
+- Ensure no lingering “loan/lend/approve/decline” text or logic remains

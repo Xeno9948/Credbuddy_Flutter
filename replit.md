@@ -7,7 +7,11 @@ This is a production-ready MVP for an **AI Credit & Cashflow Assistant** targeti
 1. **WhatsApp Assistant** — A chatbot that onboards entrepreneurs, collects daily revenue/expenses, provides cashflow snapshots, predicts shortfall risk, runs loan scenario simulations, and computes a credit score (0–1000).
 2. **Lender Partner Portal** — A web-based dashboard for lenders/credit analysts to search applicants, view scores/bands/confidence/flags, review score history, and access decision data.
 
-Both components share a single PostgreSQL database and a common scoring engine. The project also includes an **Explainable AI** layer that translates scoring features into human-readable explanations for two audiences: entrepreneurs (WhatsApp-friendly, motivational, in Dutch) and lenders (neutral, structured, in English).
+Both components share a single PostgreSQL database and a common scoring engine. The project also includes an **Explainable AI** layer that translates scoring features into human-readable explanations for two audiences: entrepreneurs (WhatsApp-friendly, motivational, in English) and lenders (neutral, structured, in English).
+
+Additional pages:
+3. **User Manual** (`/manual`) — In-app guide covering getting started, subscription tiers, chat commands, credit score explanation, and lender portal usage.
+4. **Risk Manager Dashboard** (`/partner`) — Comprehensive dashboard for lenders with overview cards, risk band distribution chart, risk pie chart, flagged applicant alerts, recent activity feed, and applicant search.
 
 **Important**: This is decision-support only. The system must NOT present itself as a lender, must NOT offer loans, and must include disclaimers.
 

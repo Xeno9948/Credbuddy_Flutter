@@ -1,7 +1,9 @@
 import React from "react";
+import { Link } from "wouter";
 import { PhoneSimulator } from "@/components/phone-simulator";
 import { ChatInterface } from "@/components/chat-interface";
 import { AdminDashboard } from "@/components/admin-dashboard";
+import { BookOpen, Shield } from "lucide-react";
 
 export default function Dashboard() {
   return (
@@ -11,6 +13,18 @@ export default function Dashboard() {
       <div className="w-full lg:w-[450px] bg-slate-200 border-r border-slate-300 flex flex-col items-center justify-center p-8 shrink-0 relative overflow-y-auto">
          <div className="absolute top-4 left-4 text-xs font-mono uppercase text-slate-500 tracking-widest">
             Client Simulation
+         </div>
+         <div className="absolute top-3 right-3 flex gap-2">
+           <Link href="/manual">
+             <button className="flex items-center gap-1 text-xs text-slate-500 hover:text-emerald-700 bg-white/80 rounded-full px-3 py-1.5 shadow-sm transition-colors" data-testid="link-manual">
+               <BookOpen className="w-3 h-3" /> Manual
+             </button>
+           </Link>
+           <Link href="/partner/login">
+             <button className="flex items-center gap-1 text-xs text-slate-500 hover:text-emerald-700 bg-white/80 rounded-full px-3 py-1.5 shadow-sm transition-colors" data-testid="link-partner">
+               <Shield className="w-3 h-3" /> Lender Portal
+             </button>
+           </Link>
          </div>
          <div className="scale-90 lg:scale-100 transform transition-transform">
            <PhoneSimulator>

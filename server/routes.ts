@@ -262,7 +262,7 @@ export async function registerRoutes(
         result.score, result.band, result.confidence,
         result.featureBreakdown as any, result.flags, "Unknown"
       );
-      const explBreakdown = buildExplainableBreakdown(explInput, "nl");
+      const explBreakdown = buildExplainableBreakdown(explInput, "en");
       const entrepreneurText = renderForEntrepreneur(explBreakdown);
       const lenderExpl = renderForLender(explBreakdown);
 
@@ -294,7 +294,7 @@ export async function registerRoutes(
       const fb = snapshot.featureBreakdownJson as Record<string, number>;
       const fl = (snapshot.flagsJson as string[]) ?? [];
       const explInput = toExplainableInput(snapshot.score, snapshot.band, snapshot.confidence, fb, fl, "Unknown");
-      const explBreakdown = buildExplainableBreakdown(explInput, "nl");
+      const explBreakdown = buildExplainableBreakdown(explInput, "en");
 
       res.json({
         ...snapshot,
@@ -362,7 +362,7 @@ export async function registerRoutes(
         const band = latestScore?.band ?? "N/A";
         reply = `📊 *Weekly Status*\n\nRevenue: R${totalRev.toLocaleString()}\nRisk Level: ${band}\n\nKeep submitting daily to improve your score.`;
       } else if (lowerInput === "help") {
-        reply = `🤖 *Commands:*\n\n• *STATUS*: See your cashflow\n• *R500*: Log revenue\n• *500 transport*: Log expense\n• *CASH 2000*: Update cash on hand\n• *SCORE*: View your credit score\n• *SCENARIO*: Test a loan`;
+        reply = `🤖 *AI Credit Assistant — Help*\n\nHere are all available commands:\n\n📊 *Track your finances:*\n• *R500* — Log today's revenue (e.g. R500, R1200)\n• *400 transport* — Log an expense with a note\n• *CASH 2000* — Update your cash on hand\n\n📈 *View your data:*\n• *STATUS* — See your weekly cashflow snapshot\n• *SCORE* — View your full credit score with tips\n\n🔮 *Plan ahead:*\n• *SCENARIO* — Test what a loan would look like\n\n💡 *Tips:*\n• Log your revenue and expenses every day\n• Even R0 days count — consistency improves your score\n• Your score updates each time you type SCORE\n\nType any command to get started!`;
       } else if (lowerInput === "score") {
         const entries = await storage.getRecentEntries(body.userId, 14);
         const cashEst = await storage.getLatestCashEstimate(body.userId);
@@ -385,7 +385,7 @@ export async function registerRoutes(
           result.featureBreakdown as any, result.flags,
           profile2?.businessType ?? "Unknown"
         );
-        const explBreakdown2 = buildExplainableBreakdown(explInput2, "nl");
+        const explBreakdown2 = buildExplainableBreakdown(explInput2, "en");
         const entrepreneurExpl = renderForEntrepreneur(explBreakdown2);
         const polished2 = await polishWithLLM(explBreakdown2, entrepreneurExpl, "");
         reply = polished2.entrepreneurText;
@@ -562,6 +562,73 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/partner/dashboard - Aggregate risk dashboard stats
+  app.get("/api/partner/dashboard", partnerAuth, async (req, res) => {
+    try {
+      const users = await storage.listUsers();
+      const enriched = await Promise.all(users.map(async (u) => {
+        const profile = await storage.getBusinessProfile(u.id);
+        const score = await storage.getLatestScore(u.id);
+        return { ...u, profile, score };
+      }));
+
+      const scored = enriched.filter(u => u.score);
+      const totalApplicants = enriched.length;
+      const avgScore = scored.length > 0
+        ? Math.round(scored.reduce((sum, u) => sum + (u.score?.score ?? 0), 0) / scored.length)
+        : 0;
+
+      const bandDist: Record<string, number> = { A: 0, B: 0, C: 0, D: 0 };
+      for (const u of scored) {
+        const b = u.score?.band ?? "D";
+        bandDist[b] = (bandDist[b] || 0) + 1;
+      }
+
+      const flaggedApplicants = scored
+        .filter(u => {
+          const flags = (u.score?.flagsJson as string[]) ?? [];
+          return flags.length > 0 || (u.score?.band === "C" || u.score?.band === "D");
+        })
+        .map(u => ({
+          id: u.id,
+          phone: u.phone,
+          businessName: u.profile?.businessName ?? null,
+          businessType: u.profile?.businessType ?? null,
+          score: u.score?.score ?? 0,
+          band: u.score?.band ?? "D",
+          confidence: u.score?.confidence ?? 0,
+          flags: (u.score?.flagsJson as string[]) ?? [],
+        }));
+
+      const recentActivity = scored
+        .sort((a, b) => new Date(b.score!.createdAt!).getTime() - new Date(a.score!.createdAt!).getTime())
+        .slice(0, 10)
+        .map(u => ({
+          id: u.id,
+          phone: u.phone,
+          businessName: u.profile?.businessName ?? null,
+          score: u.score?.score ?? 0,
+          band: u.score?.band ?? "D",
+          updatedAt: u.score?.createdAt ?? u.createdAt,
+        }));
+
+      const highRisk = scored.filter(u => u.score?.band === "C" || u.score?.band === "D").length;
+      const lowRisk = scored.filter(u => u.score?.band === "A" || u.score?.band === "B").length;
+
+      res.json({
+        totalApplicants,
+        avgScore,
+        bandDist,
+        highRisk,
+        lowRisk,
+        flaggedApplicants,
+        recentActivity,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // GET /api/partner/search?q= - Search users (partner-authenticated)
   app.get("/api/partner/search", partnerAuth, async (req, res) => {
     try {
@@ -614,7 +681,7 @@ export async function registerRoutes(
         const explBreakdown = buildExplainableBreakdown(explInput, "en");
         const lenderExpl = renderForLender(explBreakdown);
         const lenderText = renderForLenderText(explBreakdown);
-        const entrepreneurText = renderForEntrepreneur(buildExplainableBreakdown(explInput, "nl"));
+        const entrepreneurText = renderForEntrepreneur(buildExplainableBreakdown(explInput, "en"));
         const polished = await polishWithLLM(explBreakdown, entrepreneurText, lenderText);
 
         explainability = {

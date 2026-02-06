@@ -10,7 +10,7 @@ export function renderForEntrepreneur(breakdown: ExplainableBreakdown): string {
 
   if (breakdown.drivers.positive.length > 0) {
     lines.push("");
-    lines.push("Wat gaat goed:");
+    lines.push("What's going well:");
     for (const driver of breakdown.drivers.positive) {
       lines.push(`• ${driver}`);
     }
@@ -18,7 +18,7 @@ export function renderForEntrepreneur(breakdown: ExplainableBreakdown): string {
 
   if (breakdown.drivers.negative.length > 0) {
     lines.push("");
-    lines.push("Aandachtspunten:");
+    lines.push("Areas to watch:");
     for (const driver of breakdown.drivers.negative) {
       lines.push(`• ${driver}`);
     }
