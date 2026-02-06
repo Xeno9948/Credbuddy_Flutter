@@ -39,7 +39,7 @@ export default function LenderLogin() {
           </div>
           <CardTitle className="text-2xl font-display font-bold text-emerald-950">Partner Portal</CardTitle>
           <CardDescription>
-            Authorized Lenders & Risk Partners Only
+            Authorized Risk Partners & Credit Analysts Only
           </CardDescription>
         </CardHeader>
         <CardContent>

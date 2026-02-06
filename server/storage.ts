@@ -15,6 +15,7 @@ import type {
   AuditLog, InsertAuditLog,
   MessageLog, InsertMessageLog,
   Job, InsertJob,
+  CreditReportShareLink, InsertCreditReportShareLink,
 } from "@shared/schema";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -79,6 +80,13 @@ export interface IStorage {
   createJob(job: InsertJob): Promise<Job>;
   getNextPendingJob(): Promise<Job | undefined>;
   updateJobStatus(id: number, status: string, error?: string): Promise<void>;
+
+  // Credit Report Share Links
+  createShareLink(link: InsertCreditReportShareLink): Promise<CreditReportShareLink>;
+  getShareLinkByTokenHash(tokenHash: string): Promise<CreditReportShareLink | undefined>;
+
+  // Cash Estimate count
+  getCashEstimateCount(userId: number): Promise<number>;
 
   // Dashboard aggregates
   getUserCount(): Promise<number>;
@@ -355,6 +363,26 @@ export class DatabaseStorage implements IStorage {
       dist[row.band] = row.count;
     }
     return dist;
+  }
+
+  // ─── Credit Report Share Links ─────────────────────────
+  async createShareLink(link: InsertCreditReportShareLink): Promise<CreditReportShareLink> {
+    const [created] = await db.insert(schema.creditReportShareLinks).values(link).returning();
+    return created;
+  }
+
+  async getShareLinkByTokenHash(tokenHash: string): Promise<CreditReportShareLink | undefined> {
+    const [link] = await db.select().from(schema.creditReportShareLinks)
+      .where(eq(schema.creditReportShareLinks.tokenHash, tokenHash));
+    return link;
+  }
+
+  // ─── Cash Estimate Count ───────────────────────────────
+  async getCashEstimateCount(userId: number): Promise<number> {
+    const [result] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(schema.cashEstimates)
+      .where(eq(schema.cashEstimates.userId, userId));
+    return result?.count ?? 0;
   }
 }
 

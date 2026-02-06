@@ -260,3 +260,71 @@ export function usePartnerApplicant(apiKey: string, userId: number | null) {
     enabled: !!apiKey && !!userId,
   });
 }
+
+// ─── Partner recalc score ──────────────────────────────
+export function usePartnerRecalc() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ apiKey, userId }: { apiKey: string; userId: number }) => {
+      const res = await fetch(`/api/partner/users/${userId}/recalc`, {
+        method: "POST",
+        headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Recalc failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/partner"] });
+    },
+  });
+}
+
+// ─── Partner create share link ─────────────────────────
+export function useCreateShareLink() {
+  return useMutation({
+    mutationFn: async ({ apiKey, userId }: { apiKey: string; userId: number }) => {
+      const res = await fetch(`/api/partner/users/${userId}/share-link`, {
+        method: "POST",
+        headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to create share link");
+      return res.json() as Promise<{ token: string; expiresAt: string }>;
+    },
+  });
+}
+
+// ─── Shared report (public) ───────────────────────────
+export interface SharedReportData {
+  businessName: string;
+  businessType: string;
+  phone: string;
+  score: { score: number; band: string; confidence: number } | null;
+  riskIndicators: {
+    revenueStability: string;
+    cashBuffer: string;
+    dataDiscipline: string;
+    trendMomentum: string;
+    expensePressure: string;
+    shockRecovery: string;
+  };
+  explainability: { lender: LenderExplainability; breakdown: any } | null;
+  scoreHistory: { date: string; score: number; band: string; confidence: number }[];
+  dataCoverage: { activeDays: number; expenseTracking: string; cashEstimatesCount: number };
+  expiresAt: string;
+}
+
+export function useSharedReport(token: string | null) {
+  return useQuery<SharedReportData>({
+    queryKey: ["/api/share", token],
+    queryFn: async () => {
+      const res = await fetch(`/api/share/${token}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to load report");
+      }
+      return res.json();
+    },
+    enabled: !!token,
+    retry: false,
+  });
+}

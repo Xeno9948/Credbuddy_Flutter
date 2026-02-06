@@ -22,7 +22,7 @@ export default function Dashboard() {
            </Link>
            <Link href="/partner/login">
              <button className="flex items-center gap-1 text-xs text-slate-500 hover:text-emerald-700 bg-white/80 rounded-full px-3 py-1.5 shadow-sm transition-colors" data-testid="link-partner">
-               <Shield className="w-3 h-3" /> Lender Portal
+               <Shield className="w-3 h-3" /> Partner Portal
              </button>
            </Link>
          </div>

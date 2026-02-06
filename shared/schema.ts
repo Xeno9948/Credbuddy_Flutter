@@ -122,7 +122,7 @@ export const decisionRequests = pgTable("decision_requests", {
   partnerId: integer("partner_id").notNull().references(() => partners.id),
   userId: integer("user_id").notNull().references(() => users.id),
   requestedAt: timestamp("requested_at").defaultNow().notNull(),
-  status: text("status").notNull().default("pending"), // pending | approved | declined
+  status: text("status").notNull().default("pending"), // pending | completed
   notes: text("notes"),
 });
 
@@ -175,3 +175,17 @@ export const jobs = pgTable("jobs", {
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, createdAt: true });
 export type InsertJob = z.infer<typeof insertJobSchema>;
 export type Job = typeof jobs.$inferSelect;
+
+// ─── Credit Report Share Link ──────────────────────────────
+export const creditReportShareLinks = pgTable("credit_report_share_links", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  createdByPartnerId: integer("created_by_partner_id").notNull().references(() => partners.id),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertCreditReportShareLinkSchema = createInsertSchema(creditReportShareLinks).omit({ id: true, createdAt: true });
+export type InsertCreditReportShareLink = z.infer<typeof insertCreditReportShareLinkSchema>;
+export type CreditReportShareLink = typeof creditReportShareLinks.$inferSelect;

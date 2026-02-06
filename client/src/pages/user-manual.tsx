@@ -52,8 +52,8 @@ export default function UserManual() {
           <Card className="bg-violet-50 border-violet-200 shadow-sm">
             <CardContent className="p-5 text-center space-y-2">
               <Shield className="w-8 h-8 text-violet-700 mx-auto" />
-              <h3 className="font-semibold text-violet-900">Lender Portal</h3>
-              <p className="text-sm text-violet-700">Risk dashboards & decision packets for lenders</p>
+              <h3 className="font-semibold text-violet-900">Partner Portal</h3>
+              <p className="text-sm text-violet-700">Risk dashboards & credit reports for partners</p>
             </CardContent>
           </Card>
         </div>
@@ -116,9 +116,9 @@ export default function UserManual() {
               <h4 className="font-semibold text-blue-900 mb-2">Premium Tier (Coming Soon)</h4>
               <ul className="space-y-1 text-sm text-blue-800">
                 <li className="flex items-center gap-2"><Star className="w-4 h-4 text-blue-600" /> AI-powered cashflow predictions</li>
-                <li className="flex items-center gap-2"><Star className="w-4 h-4 text-blue-600" /> Loan scenario simulations</li>
+                <li className="flex items-center gap-2"><Star className="w-4 h-4 text-blue-600" /> Repayment scenario simulations</li>
                 <li className="flex items-center gap-2"><Star className="w-4 h-4 text-blue-600" /> Automatic daily reminders via WhatsApp</li>
-                <li className="flex items-center gap-2"><Star className="w-4 h-4 text-blue-600" /> Priority matching with lending partners</li>
+                <li className="flex items-center gap-2"><Star className="w-4 h-4 text-blue-600" /> Priority credit assessment visibility</li>
               </ul>
             </div>
 
@@ -179,7 +179,7 @@ export default function UserManual() {
                   </tr>
                   <tr>
                     <td className="py-3 px-2"><Badge variant="outline" className="font-mono">SCENARIO</Badge></td>
-                    <td className="py-3 px-2 text-slate-600">Simulate a loan scenario</td>
+                    <td className="py-3 px-2 text-slate-600">Simulate a repayment scenario</td>
                     <td className="py-3 px-2 text-slate-500 font-mono text-xs">scenario</td>
                   </tr>
                 </tbody>
@@ -233,13 +233,13 @@ export default function UserManual() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
               <Shield className="w-5 h-5 text-violet-600" />
-              Lender Partner Portal
+              Partner Portal
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-slate-700">
             <p>
-              The Lender Portal is designed for credit analysts and lending partners to review
-              applicant profiles and make informed lending decisions.
+              The Partner Portal is designed for credit analysts and risk partners to review
+              applicant profiles and access credit risk assessments.
             </p>
 
             <div className="space-y-3">
@@ -265,14 +265,15 @@ export default function UserManual() {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                  <span><strong>Applicant Detail</strong> — Full decision packet with AI-generated risk assessment</span>
+                  <span><strong>Credit Report</strong> — Full credit risk assessment with AI-generated explanations</span>
                 </li>
               </ul>
 
-              <h4 className="font-semibold text-slate-900">Decision Packets</h4>
+              <h4 className="font-semibold text-slate-900">Credit Reports</h4>
               <p>
-                Click on any applicant to view their full decision packet, including score breakdown,
-                trend charts, AI risk assessment, and exportable reports (JSON or printable PDF).
+                Click on any applicant to view their credit risk assessment, including score breakdown,
+                risk indicators, trend charts, and downloadable PDF reports. You can also create
+                secure sharing links and request updated assessments.
               </p>
             </div>
           </CardContent>
@@ -287,12 +288,12 @@ export default function UserManual() {
           </CardHeader>
           <CardContent className="text-sm text-amber-800 space-y-2">
             <p>
-              This system is a <strong>decision-support tool only</strong>. It does not make lending decisions,
-              offer loans, or guarantee any financial outcome.
+              This system is a <strong>decision-support tool only</strong>. It does not make credit decisions
+              or guarantee any financial outcome.
             </p>
             <p>
               Credit Score v1 is experimental and based on self-reported cashflow data. Scores should be used
-              as one input among many in any lending decision process.
+              as one input among many in any credit assessment process.
             </p>
             <p>
               The AI explanations are generated for informational purposes and do not constitute financial advice.

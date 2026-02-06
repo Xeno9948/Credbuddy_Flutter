@@ -10,12 +10,18 @@ import LenderLogin from "@/pages/lender/login";
 import LenderDashboard from "@/pages/lender/dashboard";
 import ApplicantDetail from "@/pages/lender/applicant-detail";
 import UserManual from "@/pages/user-manual";
+import Pricing from "@/pages/pricing";
+import Terms from "@/pages/terms";
+import SharedReport from "@/pages/shared-report";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/manual" component={UserManual} />
+      <Route path="/pricing" component={Pricing} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/share/:token" component={SharedReport} />
       <Route path="/partner/login" component={LenderLogin} />
       <Route path="/partner" component={LenderDashboard} />
       <Route path="/partner/applicant/:id" component={ApplicantDetail} />
