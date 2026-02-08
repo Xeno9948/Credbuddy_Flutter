@@ -3,6 +3,7 @@
  */
 
 import { execSync } from "child_process";
+import { seedTestAccount } from "./seedTestAccount";
 
 export async function runDatabaseMigrations() {
   try {
@@ -17,6 +18,21 @@ export async function runDatabaseMigrations() {
     console.error("Please run 'npm run db:push' manually\n");
     // Don't exit - allow app to start even if migrations fail
     // (in case tables already exist)
+  }
+}
+
+export async function seedTestAccountIfNeeded() {
+  try {
+    // Only seed in development or if explicitly requested
+    if (process.env.NODE_ENV === "production" && !process.env.SEED_TEST_ACCOUNT) {
+      return;
+    }
+
+    console.log("🌱 Checking for test account...");
+    await seedTestAccount();
+  } catch (error) {
+    console.error("⚠️  Test account seeding failed (non-critical):", error);
+    // Don't crash the app if seeding fails
   }
 }
 

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, LogOut, Home, PlusCircle, List, BarChart3, FileText } from "lucide-react";
 import { useWebMe, useWebLogout } from "@/lib/webApi";
 import LinkPhone from "./link-phone";
+import { AIChatAssistant } from "@/components/ai-chat-assistant";
 
 const NAV_ITEMS = [
   { label: "Home", href: "/web/app", icon: Home },
@@ -101,6 +102,9 @@ export function WebAppLayout({ children }: { children: React.ReactNode }) {
           Decision-support only. Final decisions remain with you.
         </p>
       </footer>
+
+      {/* AI Chat Assistant */}
+      {me.linkedUserId !== null && <AIChatAssistant />}
     </div>
   );
 }

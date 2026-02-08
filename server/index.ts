@@ -5,7 +5,7 @@ import { registerWebLiteRoutes } from "./webLiteRoutes";
 import { registerGeminiRoutes } from "./geminiRoutes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { validateEnvironment, runDatabaseMigrations } from "./env";
+import { validateEnvironment, runDatabaseMigrations, seedTestAccountIfNeeded } from "./env";
 
 const app = express();
 const httpServer = createServer(app);
@@ -70,6 +70,9 @@ app.use((req, res, next) => {
 
   // Run database migrations automatically
   await runDatabaseMigrations();
+
+  // Seed test account (development only)
+  await seedTestAccountIfNeeded();
 
   await registerRoutes(httpServer, app);
   registerWebLiteRoutes(app);
