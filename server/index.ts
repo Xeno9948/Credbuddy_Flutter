@@ -5,7 +5,7 @@ import { registerWebLiteRoutes } from "./webLiteRoutes";
 import { registerGeminiRoutes } from "./geminiRoutes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { validateEnvironment } from "./env";
+import { validateEnvironment, runDatabaseMigrations } from "./env";
 
 const app = express();
 const httpServer = createServer(app);
@@ -67,6 +67,9 @@ app.use((req, res, next) => {
 (async () => {
   // Validate environment variables on startup
   validateEnvironment();
+
+  // Run database migrations automatically
+  await runDatabaseMigrations();
 
   await registerRoutes(httpServer, app);
   registerWebLiteRoutes(app);

@@ -2,6 +2,24 @@
  * Environment variable validation for Railway deployment
  */
 
+import { execSync } from "child_process";
+
+export async function runDatabaseMigrations() {
+  try {
+    console.log("🔄 Running database migrations...");
+    execSync("npx drizzle-kit push", {
+      stdio: "inherit",
+      env: process.env
+    });
+    console.log("✅ Database migrations completed successfully\n");
+  } catch (error) {
+    console.error("❌ Database migration failed:", error);
+    console.error("Please run 'npm run db:push' manually\n");
+    // Don't exit - allow app to start even if migrations fail
+    // (in case tables already exist)
+  }
+}
+
 export function validateEnvironment() {
   const errors: string[] = [];
   const warnings: string[] = [];
