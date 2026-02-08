@@ -2,8 +2,10 @@ import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { registerWebLiteRoutes } from "./webLiteRoutes";
+import { registerGeminiRoutes } from "./geminiRoutes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { validateEnvironment } from "./env";
 
 const app = express();
 const httpServer = createServer(app);
@@ -63,8 +65,21 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Validate environment variables on startup
+  validateEnvironment();
+
   await registerRoutes(httpServer, app);
   registerWebLiteRoutes(app);
+  registerGeminiRoutes(app);
+
+  // Health check endpoint for Railway
+  app.get("/api/health", (_req, res) => {
+    res.status(200).json({
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || "development"
+    });
+  });
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

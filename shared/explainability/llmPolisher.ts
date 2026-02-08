@@ -1,6 +1,7 @@
 import type { ExplainableBreakdown } from "./buildExplainableBreakdown";
 import { POLISHER_SYSTEM_PROMPT } from "../llm/systemPrompts";
 import { sanitizeLLMOutput, ensureDisclaimer } from "../llm/sanitizeOutput";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export interface PolishedResult {
   polished: boolean;
@@ -13,46 +14,42 @@ export async function polishWithLLM(
   entrepreneurText: string,
   lenderText: string
 ): Promise<PolishedResult> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
     return { polished: false, entrepreneurText, lenderText };
   }
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: POLISHER_SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: `Improve the wording of these two credit risk insight texts. Return them as JSON with keys "entrepreneur" and "analyst". Do not change any facts or numbers. Use only neutral, descriptive language.\n\nEntrepreneur text:\n${entrepreneurText}\n\nAnalyst text:\n${lenderText}`,
-          },
-        ],
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: {
         temperature: 0.3,
-        max_tokens: 1000,
-        response_format: { type: "json_object" },
-      }),
+        maxOutputTokens: 1000,
+      },
     });
 
-    if (!response.ok) {
-      return { polished: false, entrepreneurText, lenderText };
-    }
+    const prompt = `${POLISHER_SYSTEM_PROMPT}
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+Improve the wording of these two credit risk insight texts. Return them as JSON with keys "entrepreneur" and "analyst". Do not change any facts or numbers. Use only neutral, descriptive language.
+
+Entrepreneur text:
+${entrepreneurText}
+
+Analyst text:
+${lenderText}`;
+
+    const result = await model.generateContent(prompt);
+    const content = result.response.text();
 
     if (!content) {
       return { polished: false, entrepreneurText, lenderText };
     }
 
-    const parsed = JSON.parse(content);
+    // Clean JSON from markdown code blocks if present
+    const cleanedContent = content.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(cleanedContent);
 
     const rawEntrepreneur = parsed.entrepreneur ?? entrepreneurText;
     const rawLender = parsed.analyst ?? parsed.lender ?? lenderText;
@@ -65,7 +62,8 @@ export async function polishWithLLM(
       entrepreneurText: ensureDisclaimer(sanitizedEntrepreneur.text),
       lenderText: ensureDisclaimer(sanitizedLender.text),
     };
-  } catch {
+  } catch (err) {
+    console.error("[LLM Polisher] Gemini error:", err);
     return { polished: false, entrepreneurText, lenderText };
   }
 }

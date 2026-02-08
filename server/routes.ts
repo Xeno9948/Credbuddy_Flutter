@@ -1038,7 +1038,7 @@ export async function registerRoutes(
       });
 
       const profile = await storage.getBusinessProfile(userId);
-      const fb = result.featureBreakdown as Record<string, number>;
+      const fb = result.featureBreakdown as unknown as Record<string, number>;
       const explInput = toExplainableInput(result.score, result.band, result.confidence, fb, result.flags, profile?.businessType ?? "Unknown");
       const explBreakdown = buildExplainableBreakdown(explInput, "en");
 
