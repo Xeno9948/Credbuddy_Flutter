@@ -31,10 +31,13 @@ function WebApp({ component: Component }: { component: React.ComponentType }) {
   );
 }
 
+import PortalSelection from "@/pages/portal-selection";
+
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/" component={PortalSelection} />
+      <Route path="/dashboard" component={Dashboard} />
       <Route path="/manual" component={UserManual} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/terms" component={Terms} />
