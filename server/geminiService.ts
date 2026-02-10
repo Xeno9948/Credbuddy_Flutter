@@ -52,9 +52,9 @@ if (!process.env.GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-// Use Gemini 1.5 Flash for speed + cost efficiency
+// Use Gemini 1.5 Flash (stable version)
 const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
+  model: "gemini-1.5-flash-001",
   generationConfig: {
     temperature: 0.3,
     maxOutputTokens: 1000,
