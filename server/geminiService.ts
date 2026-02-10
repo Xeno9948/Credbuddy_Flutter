@@ -132,7 +132,10 @@ RULES:
 
       const chat = model.startChat({
         history: chatHistory,
-        systemInstruction,
+        systemInstruction: {
+          role: "system",
+          parts: [{ text: systemInstruction }],
+        },
       });
 
       const result = await chat.sendMessage(input.userMessage);
