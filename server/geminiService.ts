@@ -52,9 +52,9 @@ if (!process.env.GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-// Fallback to gemini-pro (v1.0) as 1.5-flash is returning 404 for this key
+// Use Gemini 2.5 Flash (Current Stable)
 const model = genAI.getGenerativeModel({
-  model: "gemini-pro",
+  model: "gemini-2.5-flash",
   generationConfig: {
     temperature: 0.3,
     maxOutputTokens: 1000,
